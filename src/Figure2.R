@@ -1,16 +1,16 @@
 ##### set up #####
-setwd("~/numbat_EpiMultiome/numbat-multiome_Analysis/")
-source("src/mini_import.R")
-source("src/vis.R")
+setwd("~/numbat_EpiMultiome/Numbat-multiome_Analysis/")
+source("utils/mini_import.R")
+source("utils/vis.R")
 pacman::p_load(karyoploteR,
                ggplotify,ggplot2,cowplot,
-               ggpubr,)
+               ggpubr)
 combinedout <- readRDS("intmd/Combined_outputs.rds")
 pp <- getDefaultPlotParams(1)
 pp$topmargin <- 500
 meta_cohort <- readRDS("intmd/Analysis_meta.rds")
 invisible(list2env(meta_cohort,environment()))
-##### Karyltype to show CNVs #####
+##### Karyotype to show CNVs #####
 sample <- "pM10114"
 wgs_seg <- combinedout$wgs_call[[sample]] %>% 
   select(chr=seqnames,start,end,eventType) %>% 
@@ -149,7 +149,12 @@ eventLen_scatter <- samplerun_event_eval %>%
     override.aes = list(alpha = 1,size=rel(4)),ncol = 2))+
   labs(x="CNV event length in kb (axis in log10 scale)")
 
-
+list("sample_eval"=sample_eval,
+     "state_eval"=state_eval,
+     "karyotype"=karyo_cnv,
+     "upset_plot"=upset_detect,
+     "eventLen_scatter"=eventLen_scatter) %>% 
+  saveRDS("Figures/figure_obj.rds")
 ##### Put everything together #####
 vbs2 <- plot_grid(sample_eval, state_eval,ncol=1, labels=LETTERS[1:2])
 combined_eval <- plot_grid(vbs2, karyo_cnv,ncol=2, labels=c("","C"),

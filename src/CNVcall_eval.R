@@ -1,6 +1,5 @@
-setwd("~/numbat_EpiMultiome/numbat-multiome_Analysis")
-# setwd("~/numbat_EpiMultiome/manuscript/")
-source("mini_import.R")
+setwd("~/numbat_EpiMultiome/Numbat-multiome_Analysis/")
+source("utils/mini_import.R")
 ##### Evaluate per numbat Run #####
 source("utils/eval.R")
 invisible(list2env(readRDS("Combined_outputs.rds"),environment()))
