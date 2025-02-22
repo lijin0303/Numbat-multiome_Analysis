@@ -1,21 +1,7 @@
 ##### Serial sample in MM #####
-i <- "DL3267";clone2zoom <- 2
-i <- "pM9916";clone2zoom <- 2:3
-numbatRuns <- paste0(i,"_",modes)
-x <- numbatRuns[4]
-clone_bulkvis <- fread(glue("{i}/{x}/bulk_clones_final.tsv.gz"))
-clone_bulkvis%<>%filter(sample %in% clone2zoom)
-if(length(clone2zoom)>1){clone_bulkvis$sample <- 2}
-clone_bulkvis%<>% 
-  distinct(CHROM,snp_id,POS,state_post,
-           sample,seg_cons,seg_start,seg_end,
-           logFC,mu,phi_mle, # one line
-           DP,pBAF,haplo_theta_min
-  )
-tumor_clone <- clone_bulkvis
-cnvs <- fread(glue("{i}/{x}/segs_consensus_2.tsv"))%>% 
-  distinct(CHROM,seg_cons,seg_start,seg_end,cnv_state_post)
-zoomin <- 1:22
+i <- "DL3267"
+i <- "pM9916"
+c(tumor_clone,cnvs)%<-%readRDS(glue("{i}_CNVsignals.rds"))
 c(D,baf_segs,lfc_segs)%<-% CNV_plotD(tumor_clone,cnvs,zoomin,bamp_aware=T)
 pop_CNV <- CNVp_base(D)+
   CNVp_exclude(zoomin)+
@@ -24,14 +10,53 @@ pop_CNV <- CNVp_base(D)+
   CNVp_theme()+
   theme(plot.background = element_blank(),
         plot.margin = margin(0.5,0.5,0.7,0.5, "cm"))
-pop_CNV
+##### CLL: clone evolution #####
 i <- "patA"
+numbatRuns <- paste0(i,"_",modes)
+x <- numbatRuns[4]
+bulkL <- readRDS(glue("intmd/{x}_bulk_clones_final.rds"))
+sample_segs <- readRDS(glue('intmd/{i}_cloneSegs.rds'))[[x]]
+numbatClones <- readRDS(glue('intmd/{i}_cloneAssignment.rds'))[[x]]
+CloneD <- numbatClones %>% 
+  mutate(mode=ifelse(grepl("146p",cell),"ATAC","RNA")) %>% 
+  group_by(clone,mode) %>% 
+  summarise(ncell=n()) %>% 
+  group_by(clone)%>%
+  mutate(ntotal = sum(ncell),
+         percent = round(ncell*100/ntotal)) %>% 
+  as.data.frame() %>% 
+  group_nest(clone,ntotal) %>% 
+  mutate(clonelabel = paste0("clone ",as.numeric(clone)-1," (N = ",ntotal,")"))
+pieD <- setNames(CloneD$data,CloneD$clonelabel)
+ratios <- c(1,1,1,2.2)
+walk(2:5,\(pop){
+  zoomin <- c(1,5,7,9,10,11,12,16,17)
+  c(D,baf_segs,lfc_segs)%<-% CNV_plotD(
+    bulkL[[pop]],sample_segs[[pop]],zoomin)
+  pop_CNV <- CNVp_base(D)+
+    CNVp_exclude(zoomin)+
+    CNVp_seg(lfc_segs,"logFC")+
+    CNVp_seg(baf_segs,"pHF")+
+    CNVp_theme()+
+    theme(plot.background = element_blank(),
+          plot.margin = margin(0.5,0.5,0.7,0.5, "cm"))
+  
+  clone <- pop -1
+  circleClone <- ggClone(clonecols[pop],clone,c(30,6)*ratios[clone])
+  p = ggarrange(circleClone,pop_CNV,widths = c(1,5))
+  p <-  annotate_figure(p, top = text_grob(names(pieD)[pop], 
+                                           color = "black", face = "bold", size = 20,
+                                           vjust = 0.8))
+  p <- p+ theme(plot.background = element_rect(colour = clonecols[pop], fill=NA, size=5))
+  ggsave(p,
+         filename = glue("Figures/patA_clone{clone}.pdf"),
+         height=3.2,width=1.4*length(zoomin))
+})
 ##### CLL:lost sensitivity #####
-
-numbatClonesAll <- readRDS(glue('{i}/{i}_cloneAssignment.rds')) %>% bind_rows()
+numbatClonesAll <- readRDS(glue('intmd/{i}_cloneAssignment.rds')) %>% bind_rows()
 heatmapL <- map(3:1,\(m) mode_check(numbatClonesAll,c(m,4)))
 heatcomb <- ggpubr::ggarrange(plotlist = heatmapL,nrow=1,legend = "top",common.legend = T)
-ggsave(heatcomb,filename = "patA_clone/Clone_sensitivity_decreased.pdf",width=7,height=3)
+ggsave(heatcomb,filename = "Figures/Clone_sensitivity_decreased.pdf",width=7,height=3)
 ##### CLL:clone composition #####
 samplesOrder <- c("NIH-A-CLL-BM-01",
           "NIH-A-CLL-PB-01",
@@ -55,7 +80,7 @@ if(!file.exists("_data/cellAnnot_patA.rds")){
 }
 i <- "patA"
 x <- numbatRuns[4]
-numbatClones <- readRDS(glue('{i}/{i}_cloneAssignment.rds'))[[x]]
+numbatClones <- readRDS(glue('intmd/{i}_cloneAssignment.rds'))[[x]]
 numbatClones$clone <- paste0("Clone ",as.numeric(numbatClones$clone)-1)
 numbatClones%<>% 
   inner_join(cellAnnot,by="cell") %>% 
@@ -90,5 +115,5 @@ p1 <- boxplot_theme(stage_clone,"top",gr=2)
 p2 <- boxplot_theme(clone_source,"top")
 clone_dynamics = ggarrange(p1,p2,nrow=1,widths = c(1.2,1))
 
-ggsave("patA_clone/clone_composition.pdf",clone_dynamics,height=5,width=8)
+ggsave("Figures/clone_composition.pdf",clone_dynamics,height=5,width=8)
 
