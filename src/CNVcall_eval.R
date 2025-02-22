@@ -1,8 +1,9 @@
-setwd("~/numbat_EpiMultiome/Numbat-multiome_Analysis/")
+setwd("~/numbatm/Numbat-multiome_Analysis/")
 source("utils/mini_import.R")
+suffix <- "2025-02-21"
 ##### Evaluate per numbat Run #####
 source("utils/eval.R")
-invisible(list2env(readRDS("Combined_outputs.rds"),environment()))
+invisible(list2env(readRDS("intmd/Combined_outputs_2025-02-21.rds"),environment()))
 wgsCall_gr <- map(wgs_call,\(w) w[,c("seqnames","start","end")])
 samplerun_eval <- map(names(wgsCall_gr),\(s){
   w <- wgsCall_gr[[s]]
@@ -15,7 +16,7 @@ samplerun_eval <- map(names(wgsCall_gr),\(s){
   bind_rows()%>%
   mutate_if(is.numeric,round,digits=2)%>% 
   replace(is.na(.), 0)
-saveRDS(samplerun_eval,"intmd/samplerun_eval.rds")
+saveRDS(samplerun_eval,glue("intmd/samplerun_eval_{suffix}.rds"))
 ##### Split the analysis by CNV types #####
 wgsCall_gr <- map(wgs_call,\(w) w[,c("seqnames","start","end","eventType")])
 samplerun_byCNV_eval <- map(names(wgsCall_gr),\(s){
@@ -27,14 +28,14 @@ samplerun_byCNV_eval <- map(names(wgsCall_gr),\(s){
   bind_rows()%>%
   mutate_if(is.numeric,round,digits=2)%>% 
   replace(is.na(.), 0)
-saveRDS(samplerun_byCNV_eval,"intmd/samplerun_CNV_eval.rds")
+saveRDS(samplerun_byCNV_eval,glue("intmd/samplerun_CNV_eval_{suffix}.rds"))
 ##### event by event evaluation #####
 wgsCall_gr <- map(wgs_call,\(w) w %>% 
                     unite("CNV_ID",c("arm","annot3","eventType"),remove=F) %>% 
                     select(seqnames,start,end,CNV_ID) %>% 
                     split(as.factor(.$CNV_ID)))
 
-cytoband_gr <- getCytobands("hg38")
+cytoband_gr <- karyoploteR::getCytobands("hg38")
 cytoband_gr <- cytoband_gr[seqnames(cytoband_gr) %in% paste0("chr",1:22)]
 levs <- unique(cytoband_gr$name)
 gr <- imap(wgs_call,\(w,s) w %>% 
@@ -83,4 +84,4 @@ samplerun_byEvent_eval <- map(names(wgsCall_gr),\(s){
   mutate_if(is.numeric,round,digits=5) 
 samplerun_byEvent_eval%>%
   inner_join(event_len,by=c("sample","cnvID")) %>% 
-  saveRDS("intmd/samplerun_event_eval.rds")
+  saveRDS(glue("intmd/samplerun_event_eval_{suffix}.rds"))

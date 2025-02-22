@@ -1,7 +1,5 @@
 ##### GR reference Load in ####
 require(GenomicRanges)
-workdir <- "~/numbat_EpiMultiome/manuscript/"
-setwd(workdir)
 armF <- "_data/chrom_arm.rds"
 gapF <- "_data/gaps.rds"
 teloF <- "_data/telo.rds"

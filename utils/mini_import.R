@@ -7,5 +7,5 @@ import::from(tibble,column_to_rownames,rownames_to_column)
 import::from(parallel,detectCores)
 import::from(data.table,fread,fwrite)
 import::from(wrMisc,rowGrpMeans)
-import::from("~/earlyChromMM/utils/Basics.R",dirC,unilen,list2flat,tablem,TODsave,grpmean,matNorm)
+import::from("utils/Basics.R",dirC,unilen,list2flat,tablem,TODsave,grpmean,matNorm)
 

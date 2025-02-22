@@ -813,6 +813,18 @@ ggVBS <- function(data, x, y,fillvar,legendpos=c(0.85, 0.15),guider=2){
                                ncol = guider))
  
 }
+
+theme_clear <-function(){
+  theme <- theme(
+         panel.background = element_rect(fill='transparent'),
+         plot.background = element_rect(fill='transparent', color=NA),
+         panel.grid.major = element_blank(),
+         panel.grid.minor = element_blank(),
+         legend.background = element_rect(fill='transparent'),
+         legend.box.background = element_rect(fill='transparent')
+       )
+  return(theme)
+}
 ggVBS2 <- function(data, x, y,fillvar,shapevar,legendpos=c(0.85, 0.15),guider=2){
   import::from(ggpubr,rremove,font)
   ggplot(data, aes({{x}}, {{y}},fill={{fillvar}},shape={{shapevar}}))+
@@ -845,3 +857,4 @@ ggVBS2 <- function(data, x, y,fillvar,shapevar,legendpos=c(0.85, 0.15),guider=2)
                                ncol = guider))
   
 }
+

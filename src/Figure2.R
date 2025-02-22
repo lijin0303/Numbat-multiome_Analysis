@@ -1,11 +1,11 @@
 ##### set up #####
-setwd("~/numbat_EpiMultiome/Numbat-multiome_Analysis/")
+setwd("~/numbatm/Numbat-multiome_Analysis/")
 source("utils/mini_import.R")
 source("utils/vis.R")
 pacman::p_load(karyoploteR,
                ggplotify,ggplot2,cowplot,
                ggpubr)
-combinedout <- readRDS("intmd/Combined_outputs.rds")
+combinedout <- readRDS("intmd/Combined_outputs_2025-02-21.rds")
 pp <- getDefaultPlotParams(1)
 pp$topmargin <- 500
 meta_cohort <- readRDS("intmd/Analysis_meta.rds")
@@ -52,7 +52,7 @@ karyo_cnv <- karyo_cnv+
            size=rel(2.4),
            color=c("black",mode_cols),hjust = 0,fontface="bold") 
 ##### Sample-level Evals #####
-samplerun_eval <- readRDS("intmd/samplerun_eval.rds")
+samplerun_eval <- readRDS("intmd/samplerun_eval_2025-02-21.rds")
 samplerun_eval$mode <- factor(samplerun_eval$mode,levels=names(mode_label))
 sample_eval <- samplerun_eval%>%
   gather(metric,value,-mode,-sample)%>%
@@ -63,7 +63,7 @@ sample_eval <- samplerun_eval%>%
   labs(title = "",x = "",y = "")+ 
   scale_x_discrete(labels = gsub(" ","\n ",mode_label))
 ##### CNV type stratified Evals #####
-samplerun_cnv_eval <- readRDS("intmd/samplerun_CNV_eval.rds")
+samplerun_cnv_eval <- readRDS("intmd/samplerun_CNV_eval_2025-02-21.rds")
 cnvCnt <- table(samplerun_cnv_eval$cnv)
 cnv_color <- numbat:::cnv_colors[names(cnvCnt)]
 cnv_map <- setNames(c("Amp","bAmp","Del","CNLoH"),names(cnv_color))
@@ -81,7 +81,7 @@ state_eval <- samplerun_cnv_eval%>%
   labs(title = "",x = "",y = "")+
   scale_x_discrete(labels = cnv_xLab)
 ##### upset plots #####
-samplerun_event_eval <- readRDS("intmd/samplerun_event_eval.rds")
+samplerun_event_eval <- readRDS("intmd/samplerun_event_eval_2025-02-21.rds")
 modeHit <- samplerun_event_eval %>% 
   filter(sample!="pM9916") %>%
   select(sample,cnvID,recall,mode) %>%
@@ -92,7 +92,8 @@ modeHit <- samplerun_event_eval %>%
   mutate(mode = map(data,\(x) x$mode))
 pacman::p_load(ggpubr,ggupset)
 upset_detect <- ggplot(modeHit, aes(x=mode)) + 
-  geom_bar(fill=c("gray30","#f2cc8f","#f2cc8f","gray30","gray30"),color="black") + 
+  geom_bar(fill=c("gray30","#f2cc8f","#f2cc8f","gray30"),color="black") + 
+  geom_bar()+
   theme_pubr() + 
   scale_x_upset()+
   scale_y_continuous(expand = c(0, 0),limits = c(0,85))+
