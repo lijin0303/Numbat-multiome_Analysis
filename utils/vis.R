@@ -690,6 +690,59 @@ plot_wgs <-  function(cnv,segCov,hets) {
 }
 
 ##### evaluation plots #####
+mode_check <- function(numbatClones,indv=c(3,4)){
+  dat = numbatClones%>%
+    spread(mode,clone) %>% 
+    select(numbatRuns[indv]) %>% 
+    na.omit() %>% 
+    set_colnames(paste0("mode",1:2)) %>% 
+    group_by(mode1,mode2) %>% 
+    summarise(n=n())
+  xylab <- mode_label[indv]
+  
+  dat_norm <- dat %>% 
+    group_by(mode1) %>% 
+    mutate(m1p = n*100/sum(n)) %>% 
+    group_by(mode2) %>% 
+    mutate(m2p = n*100/sum(n)) 
+  heatcomb <- 
+  
+    ggplot(dat_norm, aes(mode1, mode2)) +
+    # Draw tiles with color mapping
+    geom_tile(aes(fill = m2p)) +
+    
+    # Highlight diagonal blocks with a black border
+    geom_tile(data = dat_norm %>% filter(mode1 == mode2), 
+              aes(fill = m2p), color = "black", size = 1) +
+    
+    # Add a black border to blocks where m2p > 30 (numbers are displayed)
+    geom_tile(data = dat_norm %>% filter(m2p > 30), 
+              aes(fill = m2p), color = "black", size = 1) +
+    
+    # Show text for values greater than 30
+    geom_text(data = dat_norm %>% filter(m2p > 30),  
+              aes(label = round(m2p, 0)), 
+              color = "white") +  # White text
+    
+    # Color gradient with markers at 25 and 75, and legend adjustments
+    scale_fill_gradient(low = "white", high = "darkgreen", 
+                        breaks = c(25, 75),  
+                        guide = guide_colorbar(frame.colour = "black",  # Box around legend
+                                               ticks.colour = "black")) +  # Black ticks
+    
+    theme_bw() +  # Use a simple black-and-white theme
+    
+    # Custom theme modifications
+    theme(
+      legend.title = element_blank(),  # Remove legend title
+      panel.grid.major = element_blank(),  # Remove major grid lines
+      panel.grid.minor = element_blank(),  # Remove minor grid lines
+      axis.ticks = element_blank(),  # Remove x and y axis ticks
+    ) +
+    
+    labs(x = xylab[1], y = xylab[2], title = "")
+  return(heatcomb)
+} 
 cloneAssignPlot <- function(confusionMat,clones2zoom=NULL){
   
   xylab <- colnames(confusionMat)[c(2,3)]
@@ -813,18 +866,6 @@ ggVBS <- function(data, x, y,fillvar,legendpos=c(0.85, 0.15),guider=2){
                                ncol = guider))
  
 }
-
-theme_clear <-function(){
-  theme <- theme(
-         panel.background = element_rect(fill='transparent'),
-         plot.background = element_rect(fill='transparent', color=NA),
-         panel.grid.major = element_blank(),
-         panel.grid.minor = element_blank(),
-         legend.background = element_rect(fill='transparent'),
-         legend.box.background = element_rect(fill='transparent')
-       )
-  return(theme)
-}
 ggVBS2 <- function(data, x, y,fillvar,shapevar,legendpos=c(0.85, 0.15),guider=2){
   import::from(ggpubr,rremove,font)
   ggplot(data, aes({{x}}, {{y}},fill={{fillvar}},shape={{shapevar}}))+
@@ -858,3 +899,196 @@ ggVBS2 <- function(data, x, y,fillvar,shapevar,legendpos=c(0.85, 0.15),guider=2)
   
 }
 
+##### clone breakdown #####
+CNV_plotD <- function(clone_bulk,clone_seg,chroms=1:22,bamp_aware=F){
+  nondiploid <- clone_seg %>% filter(cnv_state_post!="neu") %>% pull(seg_cons)
+  min_depth = 8; exp_limit = 2
+  if(nrow(clone_bulk)>10^6){frac = 0.8}else{frac=1}
+  
+  segL_state <- setNames(clone_seg$cnv_state_post,clone_seg$seg_cons)
+  cloneD <- clone_bulk %>% 
+    distinct(CHROM,snp_id,POS,
+             # seg_start,seg_end,seg_cons
+             state_post,
+             logFC,mu,phi_mle, # one line
+             DP,pBAF,haplo_theta_min
+    )
+  snp_map <- cloneD %>% distinct(CHROM,start=POS,end=POS,snp_id)
+  Q_Smap <- findOverlaps(df2gr(snp_map),df2gr(clone_seg))
+  snp_seg <- data.frame(snp_id = snp_map$snp_id[queryHits(Q_Smap)],
+                        seg_cons = clone_seg$seg_cons[subjectHits(Q_Smap)])%>% 
+    inner_join(clone_seg %>% select(seg_cons,seg_start,seg_end),by="seg_cons")
+  cloneD%<>%
+    left_join(snp_seg,by="snp_id") %>% 
+    mutate(cnv_state_post=segL_state[seg_cons]) %>% 
+    mutate(cnv_state_post=tidyr::replace_na(cnv_state_post,"neu")) %>%
+    mutate(logFC = logFC - mu)%>% 
+    filter(CHROM %in% chroms) %>% 
+    sample_frac(frac)%>%
+    mutate(logFC = ifelse(logFC > exp_limit | logFC < -exp_limit, NA, logFC)) %>%
+    mutate(pBAF = ifelse(DP >= min_depth, pBAF, NA)) %>%
+    mutate(pHF = pBAF) %>%
+    mutate(updown = gsub(".*\\_","",state_post)) %>%
+    mutate(updown = case_when(!updown %in% c("up","down")& haplo_theta_min=="major"~"up",
+                              !updown %in% c("up","down")& haplo_theta_min=="minor"~"down",
+                              TRUE~updown))%>% 
+    mutate(
+      state_post = case_when(
+        cnv_state_post %in% c('amp','loh','del',"bamp") & !is.na(updown) ~ 
+          paste0(gsub("^b","",cnv_state_post), '_',updown),
+        TRUE~"neu"
+      ))
+  if(bamp_aware){
+    cloneD$state_post = ifelse(cloneD$cnv_state_post=="bamp",
+                               "bamp",cloneD$state_post)}
+  cloneD%<>% 
+    select(CHROM,POS,snp_id,
+           seg_cons,
+           cnv_state_post,state_post,
+           pHF,logFC,phi_mle,seg_start,seg_end) %>% 
+    filter(!(state_post=="neu" & seg_cons %in% nondiploid))
+  D <-cloneD%>% 
+    data.table::as.data.table() %>%
+    data.table::melt(measure.vars = c('logFC', 'pHF'))
+  baf_segs <-  cloneD%>%
+    filter(!is.na(state_post)) %>% 
+    group_by(CHROM, seg_start, seg_end, state_post) %>%
+    summarise(meanphf = mean(pHF,na.rm=T)) %>% 
+    dplyr::mutate(variable = 'pHF') %>%
+    filter(!is.nan(meanphf))
+  lfc_segs <- cloneD%>%
+    group_by(CHROM, seg_start, seg_end) %>%
+    summarise_at("phi_mle",mean,na.rm=T) %>% 
+    dplyr::mutate(variable = 'logFC')
+  return(list("plotD"=D,
+              "baf_segs"=baf_segs,
+              "lfc_segs"=lfc_segs))
+  
+}
+CNVp_base <- function(D,dot_size=0.8,exp_limit=2){
+  baf_Limit <- data.frame(y = c(0,1), variable = 'pHF')
+  lfc_limit <- data.frame(y = c(-exp_limit, exp_limit),variable = 'logFC')
+  D%<>%mutate(variable=forcats::fct_drop(variable))
+  p = ggplot(D,aes(x = POS, y = value, color = state_post),na.rm=TRUE) + 
+    facet_grid(variable ~ CHROM, scales = 'free', space = 'free_x') +
+    geom_point(size = rel(dot_size),na.rm = TRUE,show.legend = F)+
+    scale_color_manual(
+      values = numbat:::cnv_colors,
+      limits = names(numbat:::cnv_colors),
+      na.translate = FALSE)+
+    scale_x_continuous(expand = expansion(add = 5)) 
+  if("pHF" %in% levels(D$variable)){
+    p <- p+
+      geom_hline(data=baf_Limit,aes(yintercept = y),size = 0, alpha = 0)+
+      labs(x="Genomic position",y="")+
+      theme_classic()
+  }
+  
+  
+  if("logFC" %in% levels(D$variable)){
+    p <- p+
+      geom_hline(data=lfc_limit,aes(yintercept =y),size = 0, alpha = 0)+
+      geom_hline(data = data.frame(variable = 'logFC'), 
+                 aes(yintercept = 0),color = 'gray30', linetype = 'dashed')
+  }
+  return(p)
+}
+CNVp_exclude <- function(chroms=1:22){
+  gaps = numbat::gaps_hg38 %>% filter(end - start > 1e+06)
+  acen = numbat::acen_hg38
+  segs_exclude = rbind(gaps, acen) %>%
+    filter(CHROM %in% chroms) %>% 
+    mutate(CHROM = factor(as.integer(CHROM))) %>%
+    dplyr::rename(seg_start = start, seg_end = end) 
+  return(geom_rect(inherit.aes = FALSE, data = segs_exclude,
+                   aes(xmin = seg_start, xmax = seg_end, 
+                       ymin = -Inf, ymax = Inf),
+                   fill = "gray95"))
+}
+CNVp_seg <- function(segs,type="logFC",segsize = 1.5){
+  start = 'seg_start'
+  end = 'seg_end'
+  if(type=="logFC"){
+    return(geom_segment(
+      inherit.aes = FALSE,
+      data = segs,
+      aes(x = get(start), xend = get(end), 
+          y = log2(phi_mle), yend = log2(phi_mle)),
+      color = 'darkred',
+      size = segsize))
+  }else{
+    return(geom_segment(
+      inherit.aes = FALSE,
+      data = segs,
+      aes(x = get(start), xend = get(end), 
+          y = meanphf, yend = meanphf),
+      color = "black",
+      size = segsize)) 
+  }
+}
+CNVp_theme <- function(yspace = 3,text_size = 10){
+  theme(
+    panel.spacing.x = unit(0, 'mm'),
+    panel.spacing.y = unit(yspace, 'mm'),
+    panel.border = element_rect(size = 0.5, color = 'gray', fill = NA),
+    strip.background = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    legend.title = element_text(size = text_size),
+    axis.title = element_text(size = text_size),
+    legend.text = element_text(size = text_size),
+    plot.margin = margin(t = 1, r = 0, b = 1, l = 0, 'cm'),
+    strip.text = element_text(size = text_size)
+  ) 
+}
+sourcecol <- c("RNA"="#CF5F23ff",
+             "ATAC" = "#279391ff")
+clonecols <- c("gray89",
+               c("#fab81b","#6e4a8f",
+                 "#af0627","#017101"))
+ggpie_mode <- function(d,textcol="black",pieSize=2,labelSize=2){
+  modecol <- c("RNA"="#CF5F23ff",
+               "ATAC" = "#279391ff")
+  p <- ggplot(d, aes(x = "", y = percent, fill = mode)) +
+    geom_col(color = "black",width = rel(pieSize)) +
+    geom_text(data =d %>% filter(mode=="RNA"), 
+              aes(label = percent),
+              position = position_stack(vjust = 0.5),size=rel(labelSize)) +
+    coord_polar(theta = "y") +
+    scale_fill_manual(values = modecol,name="",guide="none")+
+    theme_void()
+  return(p)
+}
+ggClone <- function(col,cloneL,sizep){
+  circleSize <- sizep[1]
+  labelSize <- sizep[2]
+  p <- ggplot() +
+    geom_point(data = data.frame(x = 0, y = 0), aes(x = x, y = y), 
+               size = rel(circleSize), shape = 21, 
+               fill = col, color = "black") +
+    geom_text(aes(x = 0, y = 0, label = cloneL), 
+              color = textcol, size = rel(labelSize)) +
+    coord_fixed()+
+    theme_void()
+  return(p)
+}
+boxplot_theme <- function(p,pos="right",gr=1){
+ p <- p+theme_bw() +
+    rremove("legend.title")+
+    theme(
+      axis.line = element_line(colour = "black",size=1),
+      axis.ticks = element_line(size=1,color="black"),
+      axis.text = element_text(color="black"),
+      axis.ticks.length=unit(0.2,"cm"),
+      legend.position =pos,
+      legend.background=element_rect(color = NA, fill = NA))+
+    font("title",size=rel(1.4))+ 
+    font("xy",size=rel(1.1))+ 
+    font("xy.text", size = rel(1.5)) +  
+    font("legend.text",size = rel(1.2))+
+    guides(fill = guide_legend(override.aes = 
+                                 list(alpha = 1,
+                                      color="black"),
+                               ncol = gr))
+return(p)
+}
