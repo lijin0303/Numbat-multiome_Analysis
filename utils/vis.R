@@ -1059,7 +1059,8 @@ ggpie_mode <- function(d,textcol="black",pieSize=2,labelSize=2){
     theme_void()
   return(p)
 }
-ggClone <- function(col,cloneL,sizep){
+ggClone <- function(col,cloneL,sizep,textcol="black"){
+  textcol <- ifelse(cloneL==1,"black","white")
   circleSize <- sizep[1]
   labelSize <- sizep[2]
   p <- ggplot() +
