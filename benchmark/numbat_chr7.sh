@@ -86,4 +86,4 @@ Rscript benchmark/run_numbat_multiome.R  \
         --out_dir benchmark/${sample}_${prefix}/ \
         --ref  benchmark/lambdas_comb_bincnt_${prefix}.rds \
         --gtf  benchmark/${binGR}\
-        --parL ${parL}
+        --parL benchmark/par_comb_bincnt.rds
