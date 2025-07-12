@@ -1,54 +1,51 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 0. Define your custom binGR and GTF
-binGR="my_bins.rds"        # ← your custom GRanges RDS
+prefix="bin100kb"
+binGR="bin100kb_chr7.rds"        # ← your custom GRanges RDS
 gtfF="hg38"                # or path/to/gtf_hg38.gtf
 
-# 1. Generate gene-to-bin map
-Rscript get_gene_binned_intersections.R \
-  --numbatGTFname ${gtfF} \
-  --binGR          ${binGR} \
-  --outfile        gene2bin_map.csv
+# # 1. Generate gene-to-bin map
+# Rscript benchmark/get_gene_binned_intersections.R \
+#   --numbatGTFname ${gtfF} \
+#   --binGR          benchmark/${binGR} \
+#   --outfile        benchmark/${prefix}_gene2bin_map.csv
 
 # 2. Prepare binned inputs for your sample(s)
 sample="patA"           # replace with your sample name
 
-# 2a. RNA bins
-Rscript get_binned_rna.R \
-  --rnaCountsFile     ${sample}.rds \
-  --outFile           ${sample}/${sample}_rna_bin.rds \
-  --barcodesKeep      ${sample}_barcodes.tsv \
-  --geneBinMapCSVFile gene2bin_map.csv
+# # 2a. RNA bins
+# Rscript benchmark/get_binned_rna.R \
+#   --rnaCountsFile     benchmark/${sample}.rds \
+#   --outFile           benchmark/${prefix}_rna_bin.rds \
+#   --barcodesKeep      benchmark/test_RNA.txt \
+#   --geneBinMapCSVFile benchmark/${prefix}_gene2bin_map.csv
 
-# 2b. ATAC bins
-Rscript get_binned_atac.R \
-  --CB      ${sample}_atac_barcodes.tsv \
-  --frag    ${sample}_fragments.tsv.gz \
-  --binGR   ${binGR} \
-  --outFile ${sample}/${sample}_atac_bin.rds
+# # 2b. ATAC bins
+# Rscript benchmark/get_binned_atac.R \
+#   --CB      benchmark/test_ATAC.txt \
+#   --frag    benchmark/chr7.fragments.tsv.gz \
+#   --binGR   benchmark/${binGR} \
+#   --outFile benchmark/${prefix}_atac_bin.rds
 
 # # 2c. Combine RNA & ATAC bins into one matrix
 # Rscript -e "
 #   library(glue);
-#   source('input_prep.R');
+#   source('benchmark/input_prep.R');
 #   saveRDS(
-#     binCnt(
+#     binCnt_union(
 #       c(
-#         glue('${sample}/${sample}_rna_bin.rds'),
-#         glue('${sample}/${sample}_atac_bin.rds')
+#         glue('benchmark/${prefix}_rna_bin.rds'),
+#         glue('benchmark/${prefix}_atac_bin.rds')
 #       ),
 #       seed  = 123,
 #       maxCB = 10000
 #     ),
-#     glue('${sample}/${sample}_comb_bincnt.rds')
+#     glue('benchmark/${prefix}_comb_bincnt.rds')
 #   )
 # "
 
 # # 3. Build references from your normal samples
-# binGR="my_bins.rds"  # same as above
-# refsamples=(normal1 normal2)
-
 # # 3a. Per-sample binned references
 # for ref in "${refsamples[@]}"; do
 #   Rscript get_binned_rna.R \
