@@ -34,7 +34,8 @@ if(!file.exists(gapF)){
 }
 
 if(!file.exists(teloF)){
-  telo_gr <- Alleloscope::telomere.GRCh38 |> 
+  # telo_gr <- Alleloscope::telomere.GRCh38 |> 
+    telo_gr <- telomere.GRCh38 |> 
     filter(V8=="telomere") |> 
     select(V2,V3,V4) |> 
     mutate(V2 = gsub("chr","",V2)) %>% 
