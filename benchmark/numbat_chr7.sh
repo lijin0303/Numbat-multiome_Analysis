@@ -12,7 +12,7 @@ gtfF="hg38"                # or path/to/gtf_hg38.gtf
 #   --outfile        benchmark/${prefix}_gene2bin_map.csv
 
 # 2. Prepare binned inputs for your sample(s)
-sample="patA"           # replace with your sample name
+# sample="patA" 
 
 # # 2a. RNA bins
 # Rscript benchmark/get_binned_rna.R \
@@ -47,31 +47,43 @@ sample="patA"           # replace with your sample name
 
 # # 3. Build references from your normal samples
 # # 3a. Per-sample binned references
-# for ref in "${refsamples[@]}"; do
-#   Rscript get_binned_rna.R \
-#     --rnaCountsFile     ${ref}.seu.rds \
-#     --outFile           Reference/lambdas_RNA_bincnt_${ref}.rds \
-#     --barcodesKeep      ${ref}_barcodes.tsv \
-#     --geneBinMapCSVFile gene2bin_map.csv \
+# Rscript benchmark/get_binned_rna.R \
+#     --rnaCountsFile     benchmark/${sample}.rds \
+#     --outFile           benchmark/lambdas_RNA_bincnt_${prefix}.rds \
+#     --barcodesKeep      benchmark/normal_RNA_annot.tsv \
+#     --geneBinMapCSVFile benchmark/${prefix}_gene2bin_map.csv \
 #     --generateAggRef
 
-#   Rscript get_binned_atac.R \
-#     --CB      ${ref}_atac_barcodes.tsv \
-#     --frag    ${ref}_fragments.tsv.gz \
-#     --binGR   ${binGR} \
-#     --outFile Reference/lambdas_ATAC_bincnt_${ref}.rds \
+# Rscript benchmark/get_binned_atac.R \
+#     --frag    benchmark/chr7.fragments.tsv.gz \
+#     --CB      benchmark/normal_ATAC_annot.tsv \
+#     --binGR   benchmark/${binGR} \
+#     --outFile benchmark/lambdas_ATAC_bincnt_${prefix}.rds \
 #     --generateAggRef
-# done
 
-# # 3b. Merge per-sample refs into combined Reference
+# 3b. Merge per-sample refs into combined Reference
 # Rscript -e "
-#   library(dplyr);
-#   # read in each per-sample ref
-#   rna_lst  <- list.files('Reference','lambdas_RNA_bincnt_.*\\.rds$', full.names=TRUE)
-#   atac_lst <- list.files('Reference','lambdas_ATAC_bincnt_.*\\.rds$', full.names=TRUE)
-#   ref_rna  <- do.call(cbind, lapply(rna_lst, readRDS))
-#   ref_atac <- do.call(cbind, lapply(atac_lst, readRDS))
-#   shared   <- intersect(rownames(ref_rna), rownames(ref_atac))
-#   ref_comb <- cbind(ref_rna[shared,], ref_atac[shared,])
-#   saveRDS(ref_comb, 'Reference/lambdas_comb_bincnt.rds')
+#   library(glue);
+#   source('benchmark/input_prep.R');
+#   saveRDS(
+#     binCnt_union(
+#       c(
+#         glue('benchmark/lambdas_RNA_bincnt_${prefix}.rds'),
+#         glue('benchmark/lambdas_ATAC_bincnt_${prefix}.rds')
+#       ),
+#       seed  = 123,
+#       maxCB = 10000
+#     ),
+#     glue('benchmark/lambdas_comb_bincnt_${prefix}.rds')
+#   )
 # "
+
+
+# parL="par_numbatm.rds" # a list of any run_numbat parameters you would like to optimize
+# Rscript benchmark/run_numbat_multiome.R  \
+# 			--countmat benchmark/benchmark/${prefix}_comb_bincnt.rds \
+# 			--alleledf ${sample}/${sample}_comb_allele_counts.tsv.gz \
+# 			--out_dir benchmark/${sample}_${prefix}/ \
+# 			--ref  benchmark/lambdas_comb_bincnt_${prefix}.rds \
+# 			--gtf  benchmark/${binGR}\
+# 			--parL ${parL}

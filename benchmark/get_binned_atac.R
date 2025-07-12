@@ -105,6 +105,3 @@ generate_bin_cell_matrix <- function(barcode_file, fragment_file, bin_file, outp
 
 # run function
 mat <- generate_bin_cell_matrix(CB,frag,binGR,outFile)
-
-# Uncomment to also save as sparse matrix
-# saveRDS(as(as.matrix(matrix), "dgCMatrix"), gsub("\\.tsv$", ".rds", args$outFile))
