@@ -1,4 +1,7 @@
 ##### numbat output vis #####
+df2gr <- function(df){
+  return(df %>% makeGRangesFromDataFrame(keep.extra.columns = T))
+}
 plot_1cloneBulk = function(bulk,chroms,ignore_loh=T){
   
     min_LLR = 5; min_depth = 8; exp_limit = 2
@@ -705,6 +708,7 @@ mode_check <- function(numbatClones,indv=c(3,4)){
     mutate(m1p = n*100/sum(n)) %>% 
     group_by(mode2) %>% 
     mutate(m2p = n*100/sum(n)) 
+  dat_norm$mode2 <- factor(dat_norm$mode2,levels=c("N","Cl1","Cl2","Cl3","Cl4"))
   heatcomb <- 
   
     ggplot(dat_norm, aes(mode1, mode2)) +
@@ -725,7 +729,7 @@ mode_check <- function(numbatClones,indv=c(3,4)){
               color = "white") +  # White text
     
     # Color gradient with markers at 25 and 75, and legend adjustments
-    scale_fill_gradient(low = "white", high = "darkgreen", 
+    scale_fill_gradient(low = "white", high = "black", 
                         breaks = c(25, 75),  
                         guide = guide_colorbar(frame.colour = "black",  # Box around legend
                                                ticks.colour = "black")) +  # Black ticks
@@ -861,7 +865,6 @@ ggVBS <- function(data, x, y,fillvar,legendpos=c(0.85, 0.15),guider=2){
     font("xy",size=rel(1.2))+ 
     font("xy.text", size = rel(1.2)) +  
     font("legend.text",size = rel(1.3))+
-    ylim(c(0.8,1))+
     guides(fill = guide_legend(override.aes = list(alpha = 1,color="black"),
                                ncol = guider))
  
@@ -1043,9 +1046,11 @@ CNVp_theme <- function(yspace = 3,text_size = 10){
 }
 sourcecol <- c("RNA"="#CF5F23ff",
              "ATAC" = "#279391ff")
+# clonecols <- c("gray89",
+#                c("#fab81b","#6e4a8f",
+#                  "#af0627","#017101"))
 clonecols <- c("gray89",
-               c("#fab81b","#6e4a8f",
-                 "#af0627","#017101"))
+               c("#fab81b","#06d6a0","#2176ff","#ef476f"))
 ggpie_mode <- function(d,textcol="black",pieSize=2,labelSize=2){
   modecol <- c("RNA"="#CF5F23ff",
                "ATAC" = "#279391ff")
@@ -1060,14 +1065,14 @@ ggpie_mode <- function(d,textcol="black",pieSize=2,labelSize=2){
   return(p)
 }
 ggClone <- function(col,cloneL,sizep,textcol="black"){
-  textcol <- ifelse(cloneL==1,"black","white")
+  # textcol <- ifelse(cloneL==1,"black","white")
   circleSize <- sizep[1]
   labelSize <- sizep[2]
   p <- ggplot() +
     geom_point(data = data.frame(x = 0, y = 0), aes(x = x, y = y), 
                size = rel(circleSize), shape = 21, 
                fill = col, color = "black") +
-    geom_text(aes(x = 0, y = 0, label = cloneL), 
+    geom_text(aes(x = 0, y = 0, label = paste0("Cl",cloneL)), 
               color = textcol, size = rel(labelSize)) +
     coord_fixed()+
     theme_void()

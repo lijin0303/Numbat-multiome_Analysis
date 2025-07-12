@@ -1,0 +1,992 @@
+---
+title: ATAC process
+execute:
+  keep-ipynb: true
+engine: jupyter
+jupyter: conda-env-bcrparse-py
+format:
+  html:
+    echo: false
+    message: false
+    html-math-method: mathml
+---
+
+```{python}
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+import os
+from os.path import join
+import pickle
+import pandas as pd
+work_dir = '/mnt/disks/inhouse/ATAC10x'
+tmp_dir = f"{work_dir}/tmp"
+out_dir = f"{work_dir}/scATAC"
+metaF = f"{work_dir}/cell_data.tsv"
+```
+
+## Project set-up
+
+```{python}
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+import sys
+import os
+from os.path import join
+from pycisTopic.pseudobulk_peak_calling import export_pseudobulk
+import requests
+import pandas as pd
+
+work_dir = '/home/ruitong/ATAC10x'
+tmp_dir = f"{work_dir}/tmp"
+out_dir = f"{work_dir}/scATAC/"
+chromsizes = pd.read_table(
+    "http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes",
+    header = None,
+    names = ["Chromosome", "End"]
+)
+chromsizes.insert(1, "Start", 0)
+chromsizes.head()
+```
+
+## Pseudobulk profile, peak call & consensus
+
+```{python}
+from pycisTopic.pseudobulk_peak_calling import export_pseudobulk
+os.makedirs(os.path.join(work_dir, "scATAC/consensus_peak_calling"), exist_ok = True)
+os.makedirs(os.path.join(work_dir, "scATAC/consensus_peak_calling/pseudobulk_bed_files"), exist_ok = True)
+os.makedirs(os.path.join(work_dir, "scATAC/consensus_peak_calling/pseudobulk_bw_files"), exist_ok = True)
+cell_data = pd.read_csv(f"{work_dir}/cell_data.tsv",sep='\t')
+cell_data.rename(columns={'CB': 'barcode'}, inplace=True)
+fragments_dict = {f"146p{i}":join(work_dir, f'data/146p{i}_fragments.tsv.gz') for i in [1,2,3]}
+path_to_blacklist= join(work_dir,'blacklist/hg38-blacklist.v2.bed')
+bw_paths, bed_paths = export_pseudobulk(input_data = cell_data,
+                 variable = 'sample.ID',
+                 sample_id_col = 'pool',
+                 chromsizes = chromsizes,
+                 bed_path = join(work_dir, 'scATAC/consensus_peak_calling/pseudobulk_bed_files/'),  
+                 bigwig_path = join(work_dir, 'scATAC/consensus_peak_calling/pseudobulk_bw_files/'),
+                 path_to_fragments  = fragments_dict,
+                 n_cpu = 10,
+                 normalize_bigwig = True,
+                 temp_dir = tmp_dir,
+                 split_pattern = "-")
+```
+
+
+
+```{python}
+import re
+fragdir = f"{out_dir}/consensus_peak_calling/pseudobulk_bed_files/"
+bed_paths = {re.sub(".fragments.tsv.gz","",f):join(fragdir,f) for f in os.listdir(fragdir)}
+```
+
+Indeed, due to parallel core issue, I never got the bigwig files successfully generated, not sure why but figured that it was not used in downstream, so just used the split fragments file.
+
+```{python}
+from pycisTopic.pseudobulk_peak_calling import peak_calling
+macs_path = "macs2"
+os.makedirs(os.path.join(out_dir, "consensus_peak_calling/MACS"), exist_ok = True)
+narrow_peak_dict = peak_calling(
+    macs_path = macs_path,
+    bed_paths = bed_paths,
+    outdir = os.path.join(os.path.join(out_dir, "consensus_peak_calling/MACS")),
+    genome_size = 'hs',
+    n_cpu = 10,
+    input_format = 'BEDPE',
+    shift = 73,
+    ext_size = 146,
+    keep_dup = 'all',
+    q_value = 0.05,
+    _temp_dir = tmp_dir
+)
+```
+
+```{python}
+from pycisTopic.iterative_peak_calling import get_consensus_peaks
+peak_half_width=250
+consensus_peaks = get_consensus_peaks(
+    narrow_peaks_dict = narrow_peak_dict,
+    peak_half_width = peak_half_width,
+    chromsizes = chromsizes,
+    path_to_blacklist = path_to_blacklist)
+```
+
+```{python}
+consensus_peaks.to_bed(
+    path = join(out_dir, "consensus_peak_calling/consensus_regions.bed"),
+    keep =True,
+    compression = 'infer',
+    chain = False)
+```
+
+From pycistopic, I believe they turned to a different recode style: polar instead of pandas data frame, dictionary in many input parameters. So what has been found in scenic+ tutorial will not apply.
+
+## QC metric generation
+
+```{python}
+!outs=/home/ruitong/ATAC10x
+!pycistopic tss gene_annotation_list | grep Human
+!mkdir -p ${outs}/qc
+!pycistopic tss get_tss \
+    --output ${outs}/qc/tss.bed \
+    --name "hsapiens_gene_ensembl" \
+    --to-chrom-source ucsc \
+    --ucsc hg38
+!head ${outs}/qc/tss.bed
+```
+
+```{python}
+regions_bed_filename = join(out_dir, "consensus_peak_calling/consensus_regions.bed")
+tss_bed_filename = join(work_dir, "qc", "tss.bed")
+pycistopic_qc_commands_filename = "pycistopic_qc_commands.txt"
+with open(pycistopic_qc_commands_filename, "w") as fh:
+    for sample, fragment_filename in fragments_dict.items():
+        print(
+            "pycistopic qc",
+            f"--fragments {fragment_filename}",
+            f"--regions {regions_bed_filename}",
+            f"--tss {tss_bed_filename}",
+            f"--output {join(work_dir,'qc',sample)}",
+            sep=" ",
+            file=fh)
+```
+
+Very memory intensive, definitely not using only 2 threads.
+
+```{python}
+!cat pycistopic_qc_commands.txt | parallel -j 4 {}
+```
+
+From melanoma cell line tutorial of scenic+
+
+
+```{.python}
+import pybiomart as pbm
+dataset = pbm.Dataset(name='hsapiens_gene_ensembl',  host='http://www.ensembl.org')
+annot = dataset.query(attributes=
+['chromosome_name', 'transcription_start_site', 'strand', 'external_gene_name', 'transcript_biotype'])
+annot['Chromosome/scaffold name'] = annot['Chromosome/scaffold name'].to_numpy(dtype = str)
+filter = annot['Chromosome/scaffold name'].str.contains('CHR|GL|JH|MT')
+annot = annot[~filter]
+annot['Chromosome/scaffold name'] = annot['Chromosome/scaffold name'].str.replace(r'(\b\S)', r'chr\1')
+annot.columns=['Chromosome', 'Start', 'Strand', 'Gene', 'Transcript_type']
+annot = annot[annot.Transcript_type == 'protein_coding']
+import pickle
+pickle.dump(annot,open(join(work_dir, 'qc/tss.pkl'), 'wb'))
+```
+
+
+```{.python}
+annot = pickle.load(open(join(work_dir, 'qc/tss.pkl'), 'rb'))
+from pycisTopic.qc import *
+path_to_regions = {k:join(out_dir, "consensus_peak_calling/consensus_regions.bed") 
+for k in fragments_dict.keys()}
+metadata_bc,profile_data_dict = compute_qc_stats(
+                fragments_dict = fragments_dict,
+                tss_annotation = annot,
+                stats=['barcode_rank_plot', 'duplicate_rate', 
+                'insert_size_distribution', 'profile_tss', 'frip'],
+                label_list = None,
+                path_to_regions = path_to_regions,
+                n_cpu = 5,
+                valid_bc = None,
+                n_frag = 100,
+                n_bc = None,
+                tss_flank_window = 1000,
+                tss_window = 50,
+                tss_minimum_signal_window = 100,
+                tss_rolling_window = 10,
+                remove_duplicates = True,
+                _temp_dir = os.path.join(tmp_dir + 'ray_spill'))
+```
+
+## QC metric visualization
+
+```{python}
+from pycisTopic.plotting.qc_plot import plot_sample_stats, plot_barcode_stats
+import matplotlib.pyplot as plt
+for sample_id in fragments_dict:
+    fig = plot_sample_stats(
+        sample_id = sample_id,
+        pycistopic_qc_output_dir = f"{work_dir}/qc"
+    )
+```
+
+```{python}
+from pycisTopic.qc import get_barcodes_passing_qc_for_sample
+sample_id_to_barcodes_passing_filters = {}
+sample_id_to_thresholds = {}
+for sample_id in fragments_dict:
+    (sample_id_to_barcodes_passing_filters[sample_id],
+     sample_id_to_thresholds[sample_id]
+     ) = get_barcodes_passing_qc_for_sample(
+            sample_id = sample_id,
+            pycistopic_qc_output_dir = f"{work_dir}/qc",
+            unique_fragments_threshold = None, 
+            tss_enrichment_threshold = None, 
+            frip_threshold = 0,
+            use_automatic_thresholds = True,
+    )
+```
+
+146p1:
+	Using automatic threshold for unique fragments: 1293.2349794580878
+	Using automatic threshold for TSS enrichment: 13.348154100551971
+146p2:
+	Using automatic threshold for unique fragments: 1341.543243700325
+	Using automatic threshold for TSS enrichment: 13.40368626005565
+146p3:
+	Using automatic threshold for unique fragments: 1326.6473047758186
+	Using automatic threshold for TSS enrichment: 13.305453700410744
+
+??? Seems like a bit striengent threshold for TSS enrichment?
+
+```{python}
+for sample_id in fragments_dict:
+    fig = plot_barcode_stats(
+        sample_id = sample_id,
+        pycistopic_qc_output_dir = f"{work_dir}/qc",
+        bc_passing_filters = sample_id_to_barcodes_passing_filters[sample_id],
+        detailed_title = False,
+        **sample_id_to_thresholds[sample_id]
+    )
+```
+
+## cistopic object 
+
+```{python}
+path_to_regions = join(out_dir, "consensus_peak_calling/consensus_regions.bed")
+path_to_blacklist= join(work_dir,'blacklist/hg38-blacklist.v2.bed')
+pycistopic_qc_output_dir = f"{work_dir}/qc"
+from pycisTopic.cistopic_class import create_cistopic_object_from_fragments
+import polars as pl
+cistopic_obj_list = []
+for sample_id in fragments_dict:
+    sample_metrics = pl.read_parquet(
+        join(pycistopic_qc_output_dir, f'{sample_id}.fragments_stats_per_cb.parquet')
+    ).to_pandas().set_index("CB").loc[ sample_id_to_barcodes_passing_filters[sample_id]]
+    cistopic_obj = create_cistopic_object_from_fragments(
+        path_to_fragments = fragments_dict[sample_id],
+        path_to_regions = path_to_regions,
+        path_to_blacklist = path_to_blacklist,
+        metrics = sample_metrics,
+        valid_bc = sample_id_to_barcodes_passing_filters[sample_id],
+        n_cpu = 5,
+        project = sample_id,
+        split_pattern = '-'
+    )
+    cistopic_obj_list.append(cistopic_obj)
+```
+
+```{python}
+from pycisTopic.cistopic_class import merge
+cistopic_obj = merge(cistopic_obj_list)
+print(cistopic_obj)
+```
+
+```{python}
+import pickle
+pickle.dump(cistopic_obj,
+            open(join(work_dir, 'scATAC/cistopic_obj.pkl'), 'wb'))
+```
+
+## Add meta-data
+
+```{python}
+cistopic_obj = pickle.load(open(projF, 'rb'))
+cell_data = pd.read_csv(metaF,sep='\t')
+cell_data['CB'] = cell_data['CB'] +'-'+ cell_data['pool']+ \
+    '___'+ cell_data['pool']
+cell_data = cell_data.set_index('CB')
+cistopic_obj.add_cell_data(cell_data[['sample.ID','pool']])
+```
+
+## scrublet
+
+Almost at expected 10% rate of doublet
+```{python}
+import scrublet as scr
+scrub = scr.Scrublet(cistopic_obj.fragment_matrix.T, expected_doublet_rate=0.1)
+doublet_scores, predicted_doublets = scrub.scrub_doublets()
+scrub.plot_histogram();
+scrub.call_doublets(threshold=0.3)
+scrub.plot_histogram();
+scrublet = pd.DataFrame([scrub.doublet_scores_obs_, scrub.predicted_doublets_], columns=cistopic_obj.cell_names, index=['Doublet_scores_fragments', 'Predicted_doublets_fragments']).T
+cistopic_obj.add_cell_data(scrublet, split_pattern = '-')
+sum(cistopic_obj.cell_data.Predicted_doublets_fragments == True)
+
+# Remove doublets
+singlets = cistopic_obj.cell_data[cistopic_obj.cell_data.Predicted_doublets_fragments == False].index.tolist()
+# Subset cisTopic object
+cistopic_obj_noDBL = cistopic_obj.subset(singlets, copy=True, split_pattern='-')
+print(cistopic_obj_noDBL)
+
+pickle.dump(
+    cistopic_obj_noDBL,
+    open(os.path.join(out_dir, "cistopic_obj_noDBL.pkl"), "wb")
+)
+```
+
+## LDA modeling
+
+```{python}
+!wget https://github.com/mimno/Mallet/releases/download/v202108/Mallet-202108-bin.tar.gz
+!tar -xf Mallet-202108-bin.tar.gz
+```
+
+```{python}
+projF=f"{out_dir}/cistopic_obj_noDBL.pkl"
+cistopic_obj = pickle.load(open(projF, 'rb'))
+os.environ['MALLET_MEMORY'] = '60G'
+from pycisTopic.lda_models import run_cgs_models_mallet
+mallet_path="Mallet-202108/bin/mallet"
+models=run_cgs_models_mallet(
+    cistopic_obj,
+    n_topics=[2, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+    n_cpu=12,
+    n_iter=500,
+    random_state=555,
+    alpha=50,
+    alpha_by_topic=True,
+    eta=0.1,
+    eta_by_topic=False,
+    tmp_path=tmp_dir,
+    save_path=tmp_dir,
+    mallet_path=mallet_path,
+)
+```
+
+For scATAC-seq data models, the most helpful methods are Minmo (topic coherence) and the log-likelihood in the last iteration.
+
+
+```{python}
+from pycisTopic.lda_models import evaluate_models
+modelsF = [f"/home/ruitong/ATAC10x/tmp/Topic{str(t)}.pkl" for t in [2, 5, 10, 15, 20, 25, 30, 35, 40]]
+models = [pickle.load(open(f, 'rb')) for f in modelsF]
+model = evaluate_models(
+    models,
+    select_model = 40,
+    return_model = True
+)
+projF=f"{out_dir}/cistopic_obj_noDBL.pkl"
+cistopic_obj = pickle.load(open(projF, 'rb'))
+CB2keep = cistopic_obj.cell_data[~cistopic_obj.cell_data.isna().any(axis=1)].index.tolist()
+cistopic_obj_clean = cistopic_obj.subset(CB2keep, copy=True, split_pattern='-')
+cistopic_obj_clean.add_LDA_model(model)
+pickle.dump(cistopic_obj_clean,open(join(out_dir,"cistopic_obj_noDBL_topic.pkl"), "wb"))
+
+projF=f"{out_dir}/cistopic_obj_noDBL_topic.pkl"
+cistopic_obj = pickle.load(open(projF, 'rb'))
+cistopic_obj.selected_model
+cistopic_obj.cell_data[cistopic_obj.cell_data.isna().any(axis=1)]
+
+```
+
+```{python}
+from pycisTopic.clust_vis import (
+    find_clusters,
+    run_umap,
+    run_tsne,
+    plot_metadata,
+    plot_topic,
+    cell_topic_heatmap,
+    harmony,
+)
+```
+
+```{python}
+harmony(cistopic_obj,vars_use=["pool"])
+```
+
+```{python}
+find_clusters(
+    cistopic_obj,
+    target  = 'cell',
+    k = 10,
+    res = [0.6, 1.2, 3],
+    prefix = 'pycisTopic_',
+    scale = True,
+    harmony=True,
+    split_pattern = '-',
+)
+```
+
+```{python}
+run_umap(
+    cistopic_obj,
+    target  = 'cell',
+    harmony=True,
+    scale=True)
+```
+
+```{python}
+run_tsne(
+    cistopic_obj,
+    harmony=True,
+    target  = 'cell',
+    scale=True)
+```
+
+```{python}
+plot_metadata(
+    cistopic_obj,
+    reduction_name='UMAP',
+    variables=[
+        "sample.ID","pool",
+        'pycisTopic_leiden_10_0.6',
+        'pycisTopic_leiden_10_1.2'],
+    target='cell', 
+    num_columns=4,
+    text_size=10,
+    dot_size=5)
+```
+
+heatmap to visualize co-occurrence
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+df = cistopic_obj.cell_data
+col1="sample.ID"
+col2 = 'pycisTopic_leiden_10_0.6'
+conf_matrix = pd.crosstab(df[col1], df[col2], 
+rownames=['sampleID'], colnames=['cluster'])
+
+# Plotting the heatmap
+plt.figure(figsize=(8, 8))
+sns.set(font_scale=0.8)  # Adjust to fit your needs
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap="Blues")
+plt.title('Confusion Matrix')
+plt.show()
+
+pickle.dump(cistopic_obj,
+open(join(out_dir,"cistopic_obj_noDBL_topic_cluster.pkl"), "wb"))
+```
+
+## Topic binarization & processing
+
+```{python}
+from pycisTopic.clust_vis import (
+    find_clusters,
+    run_umap,
+    run_tsne,
+    plot_metadata,
+    plot_topic,
+    cell_topic_heatmap
+)
+```
+
+
+```{python}
+projF=f"{out_dir}/cistopic_obj_noDBL_topic_cluster.pkl"
+cistopic_obj = pickle.load(open(projF, 'rb'))
+```
+
+```{python}
+plot_metadata(
+    cistopic_obj,
+    reduction_name='UMAP',
+    variables=['log10_unique_fragments_count', 'tss_enrichment', 'Doublet_scores_fragments', 'fraction_of_fragments_in_peaks'],
+    target='cell', num_columns=4,
+    text_size=10,
+    dot_size=5)
+```
+
+```{python}
+plot_topic(
+    cistopic_obj,
+    reduction_name = 'UMAP',
+    target = 'cell',
+    num_columns=5
+)
+```
+
+
+```{python}
+from pycisTopic.topic_binarization import binarize_topics
+```
+
+We will first binarize the topic-region distributions.
+
+```{python}
+region_bin_topics_otsu = binarize_topics(
+    cistopic_obj, method='otsu',
+    plot=True, num_columns=5
+)
+```
+
+Similarly, we can now binarize the cell-topic distribions.
+
+```{python}
+binarized_cell_topic = binarize_topics(
+    cistopic_obj,
+    target='cell',
+    method='li',
+    plot=True,
+    num_columns=5, nbins=100)
+```
+
+Evaluate the topic quality. 
+
+```{python}
+from pycisTopic.topic_qc import compute_topic_metrics, plot_topic_qc, topic_annotation
+import matplotlib.pyplot as plt
+from pycisTopic.utils import fig2img
+```
+
+```{python}
+topic_qc_metrics = compute_topic_metrics(cistopic_obj)
+```
+
+```{python}
+plot_topic_qc(topic_qc_metrics, var_x='Coherence', var_y='Marginal_topic_dist', var_color='Gini_index', plot=False, return_fig=True)
+```
+
+
+```{python}
+topic_annot = topic_annotation(
+    cistopic_obj,
+    annot_var='sample.ID',
+    binarized_cell_topic=binarized_cell_topic,
+    general_topic_thr = 0.2
+)
+```
+
+```{python}
+topic_annot
+```
+
+
+
+## DAR & gene activity
+
+```{python}
+from pycisTopic.diff_features import (
+    impute_accessibility,
+    normalize_scores,
+    find_highly_variable_features,
+    find_diff_features
+)
+import numpy as np
+```
+
+```{python}
+imputed_acc_obj = impute_accessibility(
+    cistopic_obj,
+    selected_cells=None,
+    selected_regions=None,
+    scale_factor=10**6
+)
+```
+
+```{python}
+projF=f"{out_dir}/imputed_acc_obj.pkl"
+imputed_acc_obj = pickle.load(open(projF, 'rb'))
+normalized_imputed_acc_obj = normalize_scores(imputed_acc_obj, scale_factor=10**4)
+del imputed_acc_obj
+pickle.dump(normalized_imputed_acc_obj,
+open(join(out_dir,"normalized_imputed_acc_obj.pkl"), "wb"))
+```
+
+speed up the hypothesis testing step for identifying DARs when selecting highly variable regions.
+
+```{python}
+variable_regions = find_highly_variable_features(
+    normalized_imputed_acc_obj,
+    min_disp = 0.05,
+    min_mean = 0.0125,
+    max_mean = 3,
+    max_disp = np.inf,
+    n_bins=20,
+    n_top_features=None,
+    plot=True
+)
+del normalized_imputed_acc_obj
+```
+
+Looks like higher mean than the example tutorial
+
+```{python}
+leiden_cl='pycisTopic_leiden_10_0.6'
+markers_dict= find_diff_features(
+    cistopic_obj,
+    imputed_acc_obj,
+    variable=leiden_cl,
+    var_features=variable_regions,
+    contrasts=None,
+    adjpval_thr=0.05,
+    log2fc_thr=np.log2(1.5),
+    n_cpu=12,
+    _temp_dir=tmp_dir,
+    split_pattern = '-'
+)
+```
+
+```{python}
+print("Number of DARs found:")
+print("---------------------")
+for x in markers_dict:
+    print(f"  {x}: {len(markers_dict[x])}")
+
+
+pickle.dump(markers_dict,
+open(join(out_dir,"markers_dict.pkl"), "wb"))
+
+for cell_type in markers_dict:
+    region_names_to_coordinates(
+        markers_dict[cell_type].index
+    ).sort_values(
+        ["Chromosome", "Start", "End"]
+    ).to_csv(
+        join(out_dir, "region_sets", "DARs_cell_type", f"{cell_type}.bed"),
+        sep = "\t",
+        header = False, index = False
+    )
+```
+
+```{python}
+import pyranges as pr
+from pycisTopic.gene_activity import get_gene_activity
+chromsizes = pd.read_table(join(work_dir, "qc", "hg38.chrom_sizes_and_alias.tsv"))
+chromsizes.rename({"# ucsc": "Chromosome", "length": "End"}, axis = 1, inplace = True)
+chromsizes["Start"] = 0
+chromsizes = pr.PyRanges(chromsizes[["Chromosome", "Start", "End"]])
+pr_annotation = pd.read_table(join(work_dir, "qc", "tss.bed")
+    ).rename(
+        {"Name": "Gene", "# Chromosome": "Chromosome"}, axis = 1)
+pr_annotation["Transcription_Start_Site"] = pr_annotation["Start"]
+pr_annotation = pr.PyRanges(pr_annotation)
+pickle.dump(pr_annotation,
+open(join(out_dir,"pr_annotation.pkl"), "wb"))
+```
+
+48G required
+
+```{python}
+gene_act, weigths = get_gene_activity(
+    imputed_acc_obj,
+    pr_annotation,
+    chromsizes,
+    use_gene_boundaries=True, # stop when encountering another gene
+    upstream=[1000, 100000], # Search space upstream
+    downstream=[1000,100000], # Search space downstream
+    distance_weight=True, # Whether to add a distance weight 
+    decay_rate=1, # Exponent for the distance exponential funciton 
+    extend_gene_body_upstream=10000, # bp upstream without distance weight 
+    extend_gene_body_downstream=500, # bp downstream without distance weight
+    gene_size_weight=False, # Whether to add a weights based on the length of the gene
+    gene_size_scale_factor='median', # Dividend to calculate the gene size weigth.
+    remove_promoters=False, # Whether to remove promoters 
+    average_scores=True, # Whether to divide by the total number of region
+    scale_factor=1, # Value to multiply for the final gene activity matrix
+    extend_tss=[10,10], # Space to consider a promoter
+    gini_weight = True, # Whether to add a gini index weigth. 
+    return_weights= True, # Whether to return the final weights
+    project='Gene_activity') # Project name for the gene activity object
+pickle.dump(gene_act,
+open(join(out_dir,"gene_activity.pkl"), "wb"))
+pickle.dump(weigths,
+open(join(out_dir,"weights_gene_activity.pkl"), "wb"))
+
+```
+
+```{python}
+inferredGA_markers_dict= find_diff_features(
+    cistopic_obj,
+    gene_act,
+    variable=leiden_cl,
+    var_features=None,
+    contrasts=None,
+    adjpval_thr=0.05,
+    log2fc_thr=np.log2(1.5),
+    n_cpu=13,
+    _temp_dir=tmp_dir,
+    split_pattern = '-')
+pickle.dump(inferredGA_markers_dict,
+open(join(out_dir,"inferredGA_markers_dict.pkl"), "wb"))
+```
+
+```{python}
+from pycisTopic.clust_vis import plot_imputed_features
+plot_imputed_features(
+    cistopic_obj,
+    reduction_name='UMAP',
+    imputed_data=gene_act,
+    features=["FCN1","CST3","LYZ", #monocyte
+    "HBA1", "HBB","HBM", #Erythroblast
+    "MS4A1","PAX5",'CD79A', # bcell
+    "IL7R", "TCF7","CD4",
+    "CD8A","GZMK","GZMB",
+    'GNLY', 'NKG7', #NK
+    ], 
+    scale=True,
+    num_columns=3
+)
+```
+
+We now completed all the mininal scATAC-seq preprocessing steps.
+
+In particular we:
+
+-generated a set of consensus peaks
+
+- performed quality control steps, only keeping cell barcods which passed QC metrics in both the scRNA-seq and scATAC-seq assay
+
+- performed topic modeling
+
+- inferred candidate enhancer regions by binarizing the region-topic probabilities and DARs per cell type
+
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+df = cistopic_obj.cell_data
+col1="sample.ID"
+col2 = 'pycisTopic_leiden_10_0.6'
+conf_matrix = pd.crosstab(df[col1], df[col2], 
+rownames=['sampleID'], colnames=['cluster'])
+
+# Plotting the heatmap
+plt.figure(figsize=(8, 8))
+sns.set(font_scale=0.8)  # Adjust to fit your needs
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap="Blues")
+plt.title('Confusion Matrix')
+plt.show()
+```
+
+
+Several questions:
+- what is the cluster 14: confused
+- Also, confsed about 16, bad sample?
+- Cluster 12 most likely to be normal B cell
+
+
+```{python}
+pickle.dump(cistopic_obj,
+open(join(out_dir,"latest_cistopic.pkl"), "wb"))
+```
+
+
+## subset to patient A
+
+```{python}
+from pycisTopic.clust_vis import (
+    find_clusters,
+    run_umap,
+    run_tsne,
+    plot_metadata,
+    plot_topic,
+    cell_topic_heatmap
+)
+```
+
+
+```{python}
+from pycisTopic.clust_vis import (
+    find_clusters,
+    run_umap,
+    run_tsne,
+    plot_metadata,
+    plot_topic,
+    cell_topic_heatmap,
+    harmony,
+)
+```
+```{python}
+projF=f"{out_dir}/latest_cistopic.pkl"
+cistopic_obj = pickle.load(open(projF, 'rb'))
+gene_acc = pickle.load(open(f"{out_dir}/gene_activity.pkl", 'rb'))
+patstr = "NIH-A"
+pat_bcell_CB = cistopic_obj.cell_data[(cistopic_obj.cell_data[
+    "sample.ID"].str.contains(patstr)) & 
+    (cistopic_obj.cell_data["pycisTopic_leiden_10_0.6"
+    ].isin(["3","9","12"]))].index.tolist()
+cistopic_pat = cistopic_obj.subset(pat_bcell_CB, copy=True, split_pattern='-')
+cistopic_pat.add_LDA_model(cistopic_obj.selected_model)
+harmony(cistopic_pat,vars_use=["pool"])
+find_clusters(
+    cistopic_pat,
+    target  = 'cell',
+    k = 10,
+    res = [0.5,0.8,1,1.5],
+    prefix = 'cl_',
+    scale = True,
+    harmony=True,
+    split_pattern = '-',
+)
+```
+
+```{python}
+run_umap(
+    cistopic_pat,
+    target  = 'cell',
+    harmony=True,
+    scale=True)
+```
+
+
+```{python}
+plot_metadata(
+    cistopic_pat,
+    reduction_name='UMAP',
+    variables=[
+        "sample.ID","pool",
+        'cl_leiden_10_0.5',
+        'cl_leiden_10_0.8'],
+    target='cell', 
+    num_columns=2,
+    text_size=12,
+    dot_size=5)
+```
+
+```{python}
+from pycisTopic.clust_vis import plot_imputed_features
+plot_imputed_features(
+    cistopic_pat,
+    reduction_name='UMAP',
+    imputed_data=gene_acc,
+    features=["FCN1","CST3","LYZ", #monocyte
+    "HBA1", "HBB","HBM", #Erythroblast
+    "MS4A1","PAX5",'CD79A', # bcell
+    "IL7R", "TCF7","CD4",
+    "CD8A","GZMK","GZMB",
+    'GNLY', 'NKG7', #NK
+    ], 
+    scale=True,
+    num_columns=3
+)
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+df = cistopic_pat.cell_data
+col1="sample.ID"
+col2 = 'cl_leiden_10_0.5'
+conf_matrix = pd.crosstab(df[col1], df[col2], 
+rownames=['sampleID'], colnames=['cluster'])
+
+# Plotting the heatmap
+plt.figure(figsize=(8, 8))
+sns.set(font_scale=0.8)  # Adjust to fit your needs
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap="Blues")
+plt.title('Confusion Matrix')
+plt.show()
+```
+
+```{python}
+pickle.dump(cistopic_pat,
+open(join(out_dir,"patA_bcell.pkl"), "wb"))
+```
+
+
+## subset to patient B
+
+```{python}
+from pycisTopic.clust_vis import (
+    find_clusters,
+    run_umap,
+    run_tsne,
+    plot_metadata,
+    plot_topic,
+    cell_topic_heatmap,
+    harmony
+)
+```
+
+```{python}
+projF=f"{out_dir}/latest_cistopic.pkl"
+cistopic_obj = pickle.load(open(projF, 'rb'))
+gene_acc = pickle.load(open(f"{out_dir}/gene_activity.pkl", 'rb'))
+patstr = "NIH-B"
+pat_bcell_CB = cistopic_obj.cell_data[(cistopic_obj.cell_data[
+    "sample.ID"].str.contains(patstr)) & 
+    (cistopic_obj.cell_data["pycisTopic_leiden_10_0.6"
+    ].isin(["2","7","6","17"]))].index.tolist()
+cistopic_pat = cistopic_obj.subset(pat_bcell_CB, copy=True, split_pattern='-')
+cistopic_pat.add_LDA_model(cistopic_obj.selected_model)
+harmony(cistopic_pat,vars_use=["pool"])
+find_clusters(
+    cistopic_pat,
+    target  = 'cell',
+    k = 10,
+    res = [0.2,0.5,0.8,1,1.5],
+    prefix = 'cl_',
+    scale = True,
+    harmony=True,
+    split_pattern = '-',
+)
+```
+
+```{python}
+run_umap(
+    cistopic_pat,
+    target  = 'cell',
+    harmony=True,
+    scale=True)
+```
+
+
+```{python}
+plot_metadata(
+    cistopic_pat,
+    reduction_name='UMAP',
+    variables=[
+        "sample.ID","pool",
+        'cl_leiden_10_0.2',
+        'cl_leiden_10_0.5'],
+    target='cell', 
+    num_columns=2,
+    text_size=12,
+    dot_size=5)
+```
+
+```{python}
+from pycisTopic.clust_vis import plot_imputed_features
+plot_imputed_features(
+    cistopic_pat,
+    reduction_name='UMAP',
+    imputed_data=gene_acc,
+    features=["FCN1","CST3","LYZ", #monocyte
+    "HBA1", "HBB","HBM", #Erythroblast
+    "MS4A1","PAX5",'CD79A', # bcell
+    "IL7R", "TCF7","CD4",
+    "CD8A","GZMK","GZMB",
+    'GNLY', 'NKG7', #NK
+    ], 
+    scale=True,
+    num_columns=3
+)
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+df = cistopic_pat.cell_data
+col1="sample.ID"
+col2 = 'cl_leiden_10_0.2'
+conf_matrix = pd.crosstab(df[col1], df[col2], 
+rownames=['sampleID'], colnames=['cluster'])
+
+# Plotting the heatmap
+plt.figure(figsize=(8, 8))
+sns.set(font_scale=0.8)  # Adjust to fit your needs
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap="Blues")
+plt.title('Confusion Matrix')
+plt.show()
+```
+
+```{python}
+pickle.dump(cistopic_pat,
+open(join(out_dir,"patB_bcell.pkl"), "wb"))
+```
+

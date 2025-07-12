@@ -1,0 +1,68 @@
+\begin{table}[ht]
+\centering
+\begin{subtable}[t]{\linewidth}
+\centering
+\vspace{0pt}
+\begin{table}[!h]
+\centering
+\begin{tabular}{lllll}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{4}{c}{precision} \\
+\cmidrule(l{3pt}r{3pt}){2-5}
+mode & mean & median & q25 & q75\\
+\midrule
+RNA gene & 0.976 & 0.975 & 0.970 & 0.982\\
+RNA bin & 0.970 & 0.975 & 0.970 & 0.985\\
+ATAC bin & 0.974 & 0.985 & 0.955 & 0.990\\
+Combined bin & 0.980 & 0.985 & 0.978 & 0.990\\
+\bottomrule
+\end{tabular}
+\end{table}
+\caption{Panel A: precision metrics}
+\end{subtable}
+
+\begin{subtable}[t]{\linewidth}
+\centering
+\vspace{0pt}
+\begin{table}[!h]
+\centering
+\begin{tabular}{lllll}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{4}{c}{recall} \\
+\cmidrule(l{3pt}r{3pt}){2-5}
+mode & mean & median & q25 & q75\\
+\midrule
+RNA gene & 0.973 & 0.990 & 0.980 & 0.990\\
+RNA bin & 0.971 & 0.980 & 0.960 & 0.990\\
+ATAC bin & 0.973 & 0.985 & 0.978 & 0.990\\
+Combined bin & 0.974 & 0.985 & 0.980 & 0.990\\
+\bottomrule
+\end{tabular}
+\end{table}
+\caption{Panel B: recall metrics}
+\end{subtable}
+
+\begin{subtable}[t]{\linewidth}
+\centering
+\vspace{0pt}
+\begin{table}[!h]
+\centering
+\begin{tabular}{lllll}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{4}{c}{f1} \\
+\cmidrule(l{3pt}r{3pt}){2-5}
+mode & mean & median & q25 & q75\\
+\midrule
+RNA gene & 0.974 & 0.980 & 0.970 & 0.990\\
+RNA bin & 0.970 & 0.980 & 0.970 & 0.982\\
+ATAC bin & 0.973 & 0.980 & 0.970 & 0.990\\
+Combined bin & 0.978 & 0.990 & 0.980 & 0.990\\
+\bottomrule
+\end{tabular}
+\end{table}
+\caption{Panel C: f1 metrics}
+\end{subtable}
+
+\caption{Supplementary Table S1: Performance metrics for all models.}
+\label{supp:performance}
+\end{table}

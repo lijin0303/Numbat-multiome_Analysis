@@ -1,0 +1,16 @@
+# Ignore Quarto build and cache folders
+_book/
+.quarto/
+.cache/
+# Ignore R package environment
+renv/
+**/renv/
+# Ignore R session files
+.Rhistory
+**/.Rhistory
+.RData
+.Rproj.user/
+/.quarto/
+**/patA.rds
+**/*.tsv.gz
+intmd/
