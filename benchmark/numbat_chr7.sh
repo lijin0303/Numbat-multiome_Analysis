@@ -12,11 +12,11 @@ Rscript get_gene_binned_intersections.R \
   --outfile        gene2bin_map.csv
 
 # 2. Prepare binned inputs for your sample(s)
-sample="Sample1"           # replace with your sample name
+sample="patA"           # replace with your sample name
 
 # 2a. RNA bins
 Rscript get_binned_rna.R \
-  --rnaCountsFile     ${sample}.seu.rds \
+  --rnaCountsFile     ${sample}.rds \
   --outFile           ${sample}/${sample}_rna_bin.rds \
   --barcodesKeep      ${sample}_barcodes.tsv \
   --geneBinMapCSVFile gene2bin_map.csv
