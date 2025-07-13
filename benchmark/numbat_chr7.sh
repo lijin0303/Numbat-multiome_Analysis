@@ -12,7 +12,7 @@ gtfF="hg38"                # or path/to/gtf_hg38.gtf
 #   --outfile        benchmark/${prefix}_gene2bin_map.csv
 
 # 2. Prepare binned inputs for your sample(s)
-# sample="patA" 
+sample="patA" 
 
 # # 2a. RNA bins
 # Rscript benchmark/get_binned_rna.R \
@@ -81,7 +81,7 @@ gtfF="hg38"                # or path/to/gtf_hg38.gtf
 
 # parL="par_numbatm.rds" # a list of any run_numbat parameters you would like to optimize
 Rscript benchmark/run_numbat_multiome.R  \
-        --countmat benchmark/benchmark/${prefix}_comb_bincnt.rds \
+        --countmat benchmark/${prefix}_comb_bincnt.rds \
         --alleledf benchmark/${sample}_allele_counts_chr7.tsv.gz \
         --out_dir benchmark/${sample}_${prefix}/ \
         --ref  benchmark/lambdas_comb_bincnt_${prefix}.rds \

@@ -14,3 +14,4 @@ renv/
 **/patA.rds
 **/*.tsv.gz
 intmd/
+**/*_post*.tsv
