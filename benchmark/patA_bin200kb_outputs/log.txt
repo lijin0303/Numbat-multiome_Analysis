@@ -1,0 +1,94 @@
+INFO [2025-07-13 16:50:28] 
+numbat version: 1.5.0
+scistreer version: 1.2.0
+hahmmr version: 1.0.0
+Running under parameters:
+t = 1e-05
+alpha = 1e-04
+gamma = 20
+min_cells = 50
+init_k = 3
+max_cost = 5443.6
+n_cut = 0
+max_iter = 2
+max_nni = 100
+min_depth = 0
+use_loh = auto
+segs_loh = None
+call_clonal_loh = FALSE
+segs_consensus_fix = None
+multi_allelic = FALSE
+min_LLR = 10
+min_overlap = 0.45
+max_entropy = 0.4
+skip_nj = TRUE
+diploid_chroms = None
+ncores = 13
+ncores_nni = 13
+common_diploid = TRUE
+tau = 0.4
+check_convergence = FALSE
+plot = TRUE
+genome = hg38
+Input metrics:
+13609 cells
+INFO [2025-07-13 16:50:28] Mem used: 0.44Gb
+INFO [2025-07-13 16:50:29] Approximating initial clusters using smoothed expression ..
+INFO [2025-07-13 16:50:29] Mem used: 0.441Gb
+INFO [2025-07-13 16:51:03] running hclust...
+INFO [2025-07-13 16:51:35] Iteration 1
+INFO [2025-07-13 16:51:35] Mem used: 1.39Gb
+INFO [2025-07-13 16:51:35] Expression noise level (MSE): low (0.2). 
+INFO [2025-07-13 16:51:35] Running HMMs on 5 cell groups..
+WARN [2025-07-13 16:51:36] No balanced segments, using all segments as baseline
+INFO [2025-07-13 16:51:36] diploid regions: 7a
+WARN [2025-07-13 16:51:39] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-13 16:51:39] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-13 16:51:39] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-13 16:51:39] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-13 16:51:39] No genes left in diploid regions, using all genes as baseline
+INFO [2025-07-13 16:51:41] Running HMMs on 3 cell groups..
+WARN [2025-07-13 16:51:41] No balanced segments, using all segments as baseline
+INFO [2025-07-13 16:51:41] diploid regions: 7a,7c
+INFO [2025-07-13 16:51:42] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-13 16:51:44] Evaluating CNV per cell ..
+INFO [2025-07-13 16:51:44] Mem used: 0.597Gb
+INFO [2025-07-13 16:51:45] less than 5% genes are in neutral region - including LOH in baseline
+INFO [2025-07-13 16:55:41] All cells succeeded
+INFO [2025-07-13 16:55:48] Building phylogeny ..
+INFO [2025-07-13 16:55:48] Mem used: 0.643Gb
+INFO [2025-07-13 16:55:48] Using 2 CNVs to construct phylogeny
+INFO [2025-07-13 16:55:51] Only computing UPGMA..
+INFO [2025-07-13 16:55:51] Using UPGMA tree as seed..
+INFO [2025-07-13 16:55:51] Mem used: 1.4Gb
+INFO [2025-07-13 16:56:41] Found 5394 normal cells..
+INFO [2025-07-13 16:56:51] Iteration 2
+INFO [2025-07-13 16:56:52] Mem used: 1.44Gb
+INFO [2025-07-13 16:56:52] Running HMMs on 3 cell groups..
+WARN [2025-07-13 16:56:53] No balanced segments, using all segments as baseline
+INFO [2025-07-13 16:56:53] diploid regions: 7a
+WARN [2025-07-13 16:56:55] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-13 16:56:55] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-13 16:56:55] No genes left in diploid regions, using all genes as baseline
+INFO [2025-07-13 16:56:57] Running HMMs on 3 cell groups..
+WARN [2025-07-13 16:56:57] No balanced segments, using all segments as baseline
+INFO [2025-07-13 16:56:57] diploid regions: 7a,7c,7e
+INFO [2025-07-13 16:56:58] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-13 16:57:00] Evaluating CNV per cell ..
+INFO [2025-07-13 16:57:00] Mem used: 1.44Gb
+INFO [2025-07-13 16:57:00] less than 5% genes are in neutral region - including LOH in baseline
+INFO [2025-07-13 17:00:50] All cells succeeded
+INFO [2025-07-13 17:00:57] Building phylogeny ..
+INFO [2025-07-13 17:00:57] Mem used: 1.46Gb
+INFO [2025-07-13 17:00:57] Using 2 CNVs to construct phylogeny
+INFO [2025-07-13 17:01:00] Only computing UPGMA..
+INFO [2025-07-13 17:01:00] Using UPGMA tree as seed..
+INFO [2025-07-13 17:01:01] Mem used: 1.46Gb
+INFO [2025-07-13 17:01:49] Found 5394 normal cells..
+INFO [2025-07-13 17:02:01] Running HMMs on 3 cell groups..
+INFO [2025-07-13 17:02:02] diploid regions: 7bINFO [2025-07-13 17:02:02] diploid regions: 7a
+
+WARN [2025-07-13 17:02:02] No balanced segments, using all segments as baseline
+INFO [2025-07-13 17:02:02] diploid regions: 7a,7b,7c,7d,7e
+INFO [2025-07-13 17:02:02] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-13 17:02:04] All done!

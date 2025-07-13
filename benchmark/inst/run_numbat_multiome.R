@@ -58,7 +58,9 @@ df_allele = data.table::fread(args$alleledf, header=TRUE,data.table = F)
 #==== Diagnosis Plots ====
 alleleCov <- df_allele %>% group_by(cell) %>% 
   dplyr::summarise(snp_idN = length(unique(snp_id)))
-pdf("allele_CB_coverage_hist.pdf",width=5,height=5)
+saveRDS(alleleCov, file = file.path(args$out_dir, "alleleCov.rds"))
+saveRDS(alleleCov, file = file.path(args$out_dir, "alleleCov.rds"))
+pdf(file.path(args$out_dir, "allele_CB_coverage_hist.pdf"), width = 5, height = 5)
 hist(alleleCov$snp_idN,
      main = "Histogram of SNP coverage per CB", 
      xlab = "",
