@@ -1,0 +1,38 @@
+INFO [2025-07-13 18:10:45] 
+numbat version: 1.5.0
+scistreer version: 1.2.0
+hahmmr version: 1.0.0
+Running under parameters:
+t = 1e-05
+alpha = 1e-04
+gamma = 20
+min_cells = 50
+init_k = 3
+max_cost = 5443.6
+n_cut = 0
+max_iter = 2
+max_nni = 100
+min_depth = 0
+use_loh = auto
+segs_loh = None
+call_clonal_loh = FALSE
+segs_consensus_fix = None
+multi_allelic = FALSE
+min_LLR = 10
+min_overlap = 0.45
+max_entropy = 0.4
+skip_nj = TRUE
+diploid_chroms = None
+ncores = 13
+ncores_nni = 13
+common_diploid = TRUE
+tau = 0.4
+check_convergence = FALSE
+plot = TRUE
+genome = hg38
+Input metrics:
+13609 cells
+INFO [2025-07-13 18:10:45] Mem used: 1.21Gb
+INFO [2025-07-13 18:10:48] Approximating initial clusters using smoothed expression ..
+INFO [2025-07-13 18:10:49] Mem used: 1.21Gb
+INFO [2025-07-13 18:33:16] running hclust...

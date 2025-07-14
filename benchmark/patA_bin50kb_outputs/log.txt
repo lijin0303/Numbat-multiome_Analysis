@@ -1,0 +1,91 @@
+INFO [2025-07-14 08:22:22] 
+numbat version: 1.5.0
+scistreer version: 1.2.0
+hahmmr version: 1.0.0
+Running under parameters:
+t = 1e-05
+alpha = 1e-04
+gamma = 20
+min_cells = 50
+init_k = 3
+max_cost = 5443.6
+n_cut = 0
+max_iter = 2
+max_nni = 100
+min_depth = 0
+use_loh = auto
+segs_loh = None
+call_clonal_loh = FALSE
+segs_consensus_fix = None
+multi_allelic = FALSE
+min_LLR = 10
+min_overlap = 0.45
+max_entropy = 0.4
+skip_nj = TRUE
+diploid_chroms = None
+ncores = 13
+ncores_nni = 13
+common_diploid = TRUE
+tau = 0.4
+check_convergence = FALSE
+plot = TRUE
+genome = hg38
+Input metrics:
+13609 cells
+INFO [2025-07-14 08:22:22] Mem used: 0.7Gb
+INFO [2025-07-14 08:22:24] Approximating initial clusters using smoothed expression ..
+INFO [2025-07-14 08:22:24] Mem used: 0.701Gb
+INFO [2025-07-14 08:27:46] running hclust...
+INFO [2025-07-14 08:29:34] Iteration 1
+INFO [2025-07-14 08:29:35] Mem used: 4.4Gb
+INFO [2025-07-14 08:29:36] Expression noise level (MSE): low (0.24). 
+INFO [2025-07-14 08:29:36] Running HMMs on 5 cell groups..
+WARN [2025-07-14 08:29:36] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:29:36] diploid regions: 7a
+WARN [2025-07-14 08:29:40] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-14 08:29:40] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-14 08:29:40] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-14 08:29:40] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-14 08:29:40] No genes left in diploid regions, using all genes as baseline
+INFO [2025-07-14 08:29:43] Running HMMs on 3 cell groups..
+WARN [2025-07-14 08:29:43] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:29:43] diploid regions: 7a
+INFO [2025-07-14 08:29:44] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-14 08:29:47] Evaluating CNV per cell ..
+INFO [2025-07-14 08:29:47] Mem used: 1.12Gb
+INFO [2025-07-14 08:34:13] All cells succeeded
+INFO [2025-07-14 08:34:24] Building phylogeny ..
+INFO [2025-07-14 08:34:24] Mem used: 1.21Gb
+INFO [2025-07-14 08:34:24] Using 2 CNVs to construct phylogeny
+INFO [2025-07-14 08:34:27] Only computing UPGMA..
+INFO [2025-07-14 08:34:27] Using UPGMA tree as seed..
+INFO [2025-07-14 08:34:27] Mem used: 1.97Gb
+INFO [2025-07-14 08:35:23] Found 4975 normal cells..
+INFO [2025-07-14 08:35:33] Iteration 2
+INFO [2025-07-14 08:35:33] Mem used: 2.01Gb
+INFO [2025-07-14 08:35:34] Running HMMs on 3 cell groups..
+WARN [2025-07-14 08:35:34] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:35:34] diploid regions: 7a
+INFO [2025-07-14 08:35:41] Running HMMs on 3 cell groups..
+WARN [2025-07-14 08:35:42] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:35:42] diploid regions: 7a,7c
+INFO [2025-07-14 08:35:43] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-14 08:35:46] Evaluating CNV per cell ..
+INFO [2025-07-14 08:35:46] Mem used: 2.02Gb
+INFO [2025-07-14 08:42:49] All cells succeeded
+INFO [2025-07-14 08:43:02] Building phylogeny ..
+INFO [2025-07-14 08:43:02] Mem used: 2.07Gb
+INFO [2025-07-14 08:43:02] Using 3 CNVs to construct phylogeny
+INFO [2025-07-14 08:43:05] Only computing UPGMA..
+INFO [2025-07-14 08:43:05] Using UPGMA tree as seed..
+INFO [2025-07-14 08:43:05] Mem used: 2.08Gb
+INFO [2025-07-14 08:43:33] opt_move:7g->7d, cost=612
+INFO [2025-07-14 08:44:00] Found 7629 normal cells..
+INFO [2025-07-14 08:44:10] Running HMMs on 3 cell groups..
+INFO [2025-07-14 08:44:10] diploid regions: 7a
+WARN [2025-07-14 08:44:10] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:44:10] diploid regions: 7a,7b,7c
+WARN [2025-07-14 08:44:10] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:44:10] diploid regions: 7a,7b,7c,7d,7e,7f,7g
+INFO [2025-07-14 08:44:12] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-14 08:44:15] All done!

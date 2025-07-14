@@ -5,7 +5,8 @@ set -euo pipefail
 
 workdir="benchmark"
 rsrc="benchmark/inst"
-prefix="bin500kb"
+# prefix="bin500kb"
+prefix=$1
 binGR="${prefix}_chr7.rds"    # custom GRanges RDS under $rsrc
 gtfF="hg38"                   # or path/to/gtf_hg38.gtf
 sample="patA"

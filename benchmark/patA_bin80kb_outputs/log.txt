@@ -1,0 +1,87 @@
+INFO [2025-07-14 08:45:20] 
+numbat version: 1.5.0
+scistreer version: 1.2.0
+hahmmr version: 1.0.0
+Running under parameters:
+t = 1e-05
+alpha = 1e-04
+gamma = 20
+min_cells = 50
+init_k = 3
+max_cost = 5443.6
+n_cut = 0
+max_iter = 2
+max_nni = 100
+min_depth = 0
+use_loh = auto
+segs_loh = None
+call_clonal_loh = FALSE
+segs_consensus_fix = None
+multi_allelic = FALSE
+min_LLR = 10
+min_overlap = 0.45
+max_entropy = 0.4
+skip_nj = TRUE
+diploid_chroms = None
+ncores = 13
+ncores_nni = 13
+common_diploid = TRUE
+tau = 0.4
+check_convergence = FALSE
+plot = TRUE
+genome = hg38
+Input metrics:
+13609 cells
+INFO [2025-07-14 08:45:20] Mem used: 0.572Gb
+INFO [2025-07-14 08:45:21] Approximating initial clusters using smoothed expression ..
+INFO [2025-07-14 08:45:21] Mem used: 0.572Gb
+INFO [2025-07-14 08:48:40] running hclust...
+INFO [2025-07-14 08:49:51] Iteration 1
+INFO [2025-07-14 08:49:51] Mem used: 2.9Gb
+INFO [2025-07-14 08:49:52] Expression noise level (MSE): low (0.22). 
+INFO [2025-07-14 08:49:52] Running HMMs on 5 cell groups..
+WARN [2025-07-14 08:49:52] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:49:52] diploid regions: 7a
+INFO [2025-07-14 08:49:58] Running HMMs on 3 cell groups..
+WARN [2025-07-14 08:49:58] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:49:58] diploid regions: 7a
+INFO [2025-07-14 08:49:59] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-14 08:50:01] Evaluating CNV per cell ..
+INFO [2025-07-14 08:50:02] Mem used: 0.864Gb
+INFO [2025-07-14 08:54:00] All cells succeeded
+INFO [2025-07-14 08:54:07] Building phylogeny ..
+INFO [2025-07-14 08:54:08] Mem used: 0.92Gb
+INFO [2025-07-14 08:54:08] Using 1 CNVs to construct phylogeny
+INFO [2025-07-14 08:54:10] Only computing UPGMA..
+INFO [2025-07-14 08:54:10] Using UPGMA tree as seed..
+INFO [2025-07-14 08:54:11] Mem used: 1.67Gb
+INFO [2025-07-14 08:54:53] Found 7124 normal cells..
+INFO [2025-07-14 08:55:15] Iteration 2
+INFO [2025-07-14 08:55:15] Mem used: 1.71Gb
+INFO [2025-07-14 08:55:16] Running HMMs on 2 cell groups..
+WARN [2025-07-14 08:55:16] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:55:16] diploid regions: 7a
+WARN [2025-07-14 08:55:19] No genes left in diploid regions, using all genes as baseline
+WARN [2025-07-14 08:55:19] No genes left in diploid regions, using all genes as baseline
+INFO [2025-07-14 08:55:21] Running HMMs on 2 cell groups..
+WARN [2025-07-14 08:55:22] No balanced segments, using all segments as baseline
+INFO [2025-07-14 08:55:22] diploid regions: 7a
+INFO [2025-07-14 08:55:22] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-14 08:55:24] Evaluating CNV per cell ..
+INFO [2025-07-14 08:55:25] Mem used: 1.7Gb
+INFO [2025-07-14 08:55:25] less than 5% genes are in neutral region - including LOH in baseline
+INFO [2025-07-14 09:01:30] All cells succeeded
+INFO [2025-07-14 09:01:38] Building phylogeny ..
+INFO [2025-07-14 09:01:38] Mem used: 1.73Gb
+INFO [2025-07-14 09:01:38] Using 2 CNVs to construct phylogeny
+INFO [2025-07-14 09:01:41] Only computing UPGMA..
+INFO [2025-07-14 09:01:41] Using UPGMA tree as seed..
+INFO [2025-07-14 09:01:41] Mem used: 1.74Gb
+INFO [2025-07-14 09:02:27] Found 5600 normal cells..
+INFO [2025-07-14 09:02:37] Running HMMs on 3 cell groups..
+INFO [2025-07-14 09:02:38] diploid regions: 7a
+INFO [2025-07-14 09:02:38] diploid regions: 7b
+WARN [2025-07-14 09:02:38] No balanced segments, using all segments as baseline
+INFO [2025-07-14 09:02:38] diploid regions: 7a,7b,7c,7d,7e,7f,7g,7h,7i
+INFO [2025-07-14 09:02:39] less than 5% of genome is in neutral region - including LOH in baseline
+INFO [2025-07-14 09:02:41] All done!
