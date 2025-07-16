@@ -15,10 +15,19 @@ for SUBDIR in "$INPUT_PARENT"/*/; do
         SEPARATOR="GEX"
     fi
     echo "Processing $SUBDIR_NAME with separator $SEPARATOR"
-    python3 /workspace/run_congasp_training.py \
+    
+    # Run with error handling and memory management
+    if python3 /workspace/run_congasp_training.py \
         --separator "$SEPARATOR" \
         --output_dir "$SUBDIR" \
-        --input_dir "$SUBDIR"
+        --input_dir "$SUBDIR"; then
+        echo "Successfully processed $SUBDIR_NAME"
+    else
+        echo "Failed to process $SUBDIR_NAME - continuing with next file"
+    fi
+    
+    # Sleep to allow memory cleanup
+    sleep 5
 done
 
 echo "All subfolders processed." 
