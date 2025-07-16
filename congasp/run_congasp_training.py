@@ -28,8 +28,8 @@ def main():
     pld = torch.tensor(ploidy_df['ploidy'].values, dtype=torch.float32)
 
     # Split columns based on separator string
-    atac_cols = [col for col in bin_counts.columns if sep in col]
-    rna_cols = [col for col in bin_counts.columns if sep not in col]
+    atac_cols = [col for col in bin_counts.columns if sep not in col]
+    rna_cols = [col for col in bin_counts.columns if sep in col]
     bin_counts_atac = bin_counts[atac_cols]
     bin_counts_rna = bin_counts[rna_cols]
 
