@@ -3,10 +3,13 @@
 # This script loads CONGASp model results, extracts regions with copy number changes, and summarizes/visualizes them.
 
 #%%
+import sys
+sys.path.append('/app')
 import numpy as np
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
+
 
 #%% [markdown]
 # Load Results
