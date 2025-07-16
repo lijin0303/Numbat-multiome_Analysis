@@ -17,3 +17,4 @@ intmd/
 **/*_post*.tsv
 CONGASp_github/
 **/.ipynb_checkpoints/
+congasp/inputData/

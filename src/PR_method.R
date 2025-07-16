@@ -47,3 +47,49 @@ CNV2eval$epianeufinder <- fread("benchmark/epianeufinder_DL3267_cnv_calls.tsv") 
 map(CNV2eval,\(n)eval_call(wgsCall_gr[["DL3267"]],n)) %>%
   bind_rows() %>% 
   mutate(mode = names(CNV2eval))
+
+library(ggplot2)
+library(tidyr)
+
+# Assuming the previous code produces a data frame like this:
+pr_df <- map(CNV2eval, \(n) eval_call(wgsCall_gr[["DL3267"]], n)) %>%
+  bind_rows() %>%
+  mutate(mode = names(CNV2eval))
+
+# Reshape for plotting
+pr_long <- pr_df %>%
+  select(mode, precision, recall, f1) %>%
+  pivot_longer(cols = c("precision", "recall", "f1"), names_to = "metric", values_to = "value")
+
+# Plot
+ggplot(pr_long, aes(x = mode, y = value, fill = metric)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Precision, Recall, F1 for DL3267", y = "Score", x = "Mode") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+
+library(patchwork) # already loaded
+
+p_f1 <- ggplot(filter(pr_long, metric == "f1"), aes(x = mode, y = value, fill = mode)) +
+  geom_bar(stat = "identity") +
+  labs(title = "F1 Score", y = "F1", x = NULL) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1") +
+  guides(fill = guide_legend(title = "Mode"))
+
+p_precision <- ggplot(filter(pr_long, metric == "precision"), aes(x = mode, y = value, fill = mode)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Precision", y = "Precision", x = NULL) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1") +
+  guides(fill = guide_legend(title = "Mode"))
+
+p_recall <- ggplot(filter(pr_long, metric == "recall"), aes(x = mode, y = value, fill = mode)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Recall", y = "Recall", x = NULL) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1") +
+  guides(fill = guide_legend(title = "Mode"))
+
+# Combine the three plots with a shared legend
+(p_f1 / p_precision / p_recall) + plot_layout(guides = "collect")
