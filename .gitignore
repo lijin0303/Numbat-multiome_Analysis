@@ -15,3 +15,5 @@ renv/
 **/*.tsv.gz
 intmd/
 **/*_post*.tsv
+CONGASp_github/
+**/.ipynb_checkpoints/
