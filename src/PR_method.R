@@ -9,12 +9,13 @@ wgs <- wgs %>%
             end = seg_end, cnv = cnv_state) %>% 
   filter(seqnames==7)
 
-# Load CONGASp calls
-congasp <- read.delim("congasp/cnv_segments_formatted.tsv", stringsAsFactors = FALSE)
 
-# Get unique clusters
+
+invisible(list2env(readRDS("intmd/Combined_outputs_2025-02-21.rds"),environment()))
+wgsCall_gr <- map(wgs_call,\(w) distinct(w[,c("seqnames","start","end","eventType")]))
+congasp <- read.delim("congasp/cnv_segments_formatted.tsv", 
+                      stringsAsFactors = FALSE)
 clusters <- sort(unique(congasp$cluster))
-
 # Loop through clusters and evaluate
 for (cl in clusters) {
   cat("\nCluster", cl, ":\n")
@@ -22,7 +23,7 @@ for (cl in clusters) {
     select(seqnames, start, end, cnv) %>% 
     unique() %>% 
     mutate(seqnames=gsub("chr","",seqnames))
-  print(eval_call(wgs, congasp_cl, byCNV=TRUE))
+  print(eval_call(wgsCall_gr$pM11004, congasp_cl, byCNV=TRUE))
 }
 
 numbat_seg <- map(combinedout$numbat_call[["patA"]],\(d) d %>% 
@@ -93,3 +94,48 @@ p_recall <- ggplot(filter(pr_long, metric == "recall"), aes(x = mode, y = value,
 
 # Combine the three plots with a shared legend
 (p_f1 / p_precision / p_recall) + plot_layout(guides = "collect")
+
+# ---- Evaluate all congasp/cnv_congasp *_cnv_segments_formatted.tsv files by sample ----
+library(stringr)
+
+# List all *_cnv_segments_formatted.tsv files in congasp/cnv_congasp
+cnv_files <- list.files('congasp/cnv_congasp', pattern = '_cnv_segments_formatted.tsv$', full.names = TRUE)
+
+# Prepare results list
+glob_pr_results <- list()
+
+for (f in cnv_files) {
+  # Extract sample name from filename
+  sample <- str_replace(basename(f), '_cnv_segments_formatted.tsv', '')
+  # Read the file
+  dat <- read.delim(f, stringsAsFactors = FALSE)
+  # Standardize columns for eval_call
+  dat <- dat %>% select(seqnames, start, end, cnv) %>% mutate(seqnames = gsub('chr', '', seqnames))
+  # Check if sample exists in wgsCall_gr
+  if (!sample %in% names(wgsCall_gr)) {
+    warning(paste('Sample', sample, 'not found in wgsCall_gr, skipping.'))
+    next
+  }
+  # Evaluate
+  pr <- eval_call(wgsCall_gr[[sample]], dat, byCNV = TRUE)
+  pr$sample <- sample
+  glob_pr_results[[sample]] <- pr
+}
+
+# Combine all results
+glob_pr_df <- bind_rows(glob_pr_results)
+
+# Reshape for plotting
+library(tidyr)
+glob_pr_long <- glob_pr_df %>%
+  select(sample, cnv, precision, recall, f1) %>%
+  pivot_longer(cols = c('precision', 'recall', 'f1'), names_to = 'metric', values_to = 'value')
+
+# Plot
+library(ggplot2)
+ggplot(glob_pr_long, aes(x = sample, y = value, fill = metric)) +
+  geom_bar(stat = 'identity', position = 'dodge') +
+  facet_wrap(~cnv) +
+  labs(title = 'Precision, Recall, F1 for each sample (by CNV type)', y = 'Score', x = 'Sample') +
+  theme_minimal() +
+  scale_fill_brewer(palette = 'Set1')
