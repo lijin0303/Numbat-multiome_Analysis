@@ -1,40 +1,8 @@
 library(dplyr)
 source("utils/eval.R")
+source("utils/mini_import.R")
 
-# Load WGS (patA) calls
-wgs <- read.delim("pat_comb/segs_consensus_2.tsv", stringsAsFactors = FALSE)
-wgs <- wgs %>%
-  filter(!is.na(cnv_state), cnv_state != "neu") %>%
-  transmute(seqnames = CHROM, start = seg_start, 
-            end = seg_end, cnv = cnv_state) %>% 
-  filter(seqnames==7)
-
-
-
-invisible(list2env(readRDS("intmd/Combined_outputs_2025-02-21.rds"),environment()))
-wgsCall_gr <- map(wgs_call,\(w) distinct(w[,c("seqnames","start","end","eventType")]))
-congasp <- read.delim("congasp/cnv_segments_formatted.tsv", 
-                      stringsAsFactors = FALSE)
-clusters <- sort(unique(congasp$cluster))
-# Loop through clusters and evaluate
-for (cl in clusters) {
-  cat("\nCluster", cl, ":\n")
-  congasp_cl <- congasp %>% filter(cluster == cl) %>% 
-    select(seqnames, start, end, cnv) %>% 
-    unique() %>% 
-    mutate(seqnames=gsub("chr","",seqnames))
-  print(eval_call(wgsCall_gr$pM11004, congasp_cl, byCNV=TRUE))
-}
-
-numbat_seg <- map(combinedout$numbat_call[["patA"]],\(d) d %>% 
-                    select(chr=CHROM,start=seg_start,
-                           end=seg_end,
-                           eventType=cnv_state_post) %>% 
-                    filter(chr==7))
-
-map(numbat_seg,\(x) eval_call(wgs, x, byCNV=TRUE))
-
-
+# ---- epianeufinder ----
 invisible(list2env(readRDS("intmd/Combined_outputs_2025-02-21.rds"),environment()))
 wgsCall_gr <- map(wgs_call,\(w) w[,c("seqnames","start","end")])
 CNV2eval <- map(combinedout$numbat_call[["DL3267"]],\(d) d %>% 
@@ -95,47 +63,59 @@ p_recall <- ggplot(filter(pr_long, metric == "recall"), aes(x = mode, y = value,
 # Combine the three plots with a shared legend
 (p_f1 / p_precision / p_recall) + plot_layout(guides = "collect")
 
-# ---- Evaluate all congasp/cnv_congasp *_cnv_segments_formatted.tsv files by sample ----
-library(stringr)
+# ---- CONGASP ----
+library(purrr)
+paired_results <- map(intersect(names(wgsCall_gr), names(numbat_call)), function(sample) {
+  if (!"comb_bincnt" %in% names(numbat_call[[sample]])) return(NULL)
+  congasp_file <- file.path('congasp/cnv_congasp', paste0(sample, '_cnv_segments_formatted.tsv'))
+  if (!file.exists(congasp_file)) return(NULL)
+  congasp_dat <- read.delim(congasp_file, stringsAsFactors = FALSE) %>%
+    select(seqnames, start, end, cnv, cluster) %>%
+    mutate(seqnames = gsub('chr', '', seqnames))
+  numbat_dat <- numbat_call[[sample]][["comb_bincnt"]] %>%
+    select(seqnames = CHROM, start = seg_start, end = seg_end, cnv = cnv_state_post) %>%
+    mutate(seqnames = as.character(seqnames))
+  # Evaluate byCNV=TRUE for numbat
+  pr_numbat <- eval_call(wgsCall_gr[[sample]], numbat_dat, byCNV = TRUE) %>%
+    filter(cnv %in% c('amp','del'))
+  pr_numbat$method <- 'Numbat-multiome\nCombined Bin'; pr_numbat$sample <- sample
+  # For CONGASP: evaluate per cluster, take max for each metric and cnv
+  pr_congasp_all <- map(split(congasp_dat, congasp_dat$cluster), function(df) {
+    eval_call(wgsCall_gr[[sample]], df %>% select(seqnames, start, end, cnv), byCNV = TRUE)
+  }) %>% bind_rows() %>% filter(cnv %in% c('amp','del'))
+  pr_congasp_max <- pr_congasp_all %>%
+    group_by(cnv) %>%
+    summarise(precision = max(precision, na.rm=TRUE),
+              recall = max(recall, na.rm=TRUE),
+              f1 = max(f1, na.rm=TRUE)) %>%
+    ungroup()
+  pr_congasp_max$method <- 'CONGAS+'; pr_congasp_max$sample <- sample
+  list(congasp = pr_congasp_max, numbat = pr_numbat)
+})
+paired_all_df <- map_dfr(paired_results, ~bind_rows(.x), .id = NULL)
+paired_all_long <- paired_all_df %>%
+  select(sample, method, cnv, precision, recall, f1) %>%
+  pivot_longer(cols = c('precision', 'recall', 'f1'), 
+    names_to = 'metric', values_to = 'value')
 
-# List all *_cnv_segments_formatted.tsv files in congasp/cnv_congasp
-cnv_files <- list.files('congasp/cnv_congasp', pattern = '_cnv_segments_formatted.tsv$', full.names = TRUE)
-
-# Prepare results list
-glob_pr_results <- list()
-
-for (f in cnv_files) {
-  # Extract sample name from filename
-  sample <- str_replace(basename(f), '_cnv_segments_formatted.tsv', '')
-  # Read the file
-  dat <- read.delim(f, stringsAsFactors = FALSE)
-  # Standardize columns for eval_call
-  dat <- dat %>% select(seqnames, start, end, cnv) %>% mutate(seqnames = gsub('chr', '', seqnames))
-  # Check if sample exists in wgsCall_gr
-  if (!sample %in% names(wgsCall_gr)) {
-    warning(paste('Sample', sample, 'not found in wgsCall_gr, skipping.'))
-    next
-  }
-  # Evaluate
-  pr <- eval_call(wgsCall_gr[[sample]], dat, byCNV = TRUE)
-  pr$sample <- sample
-  glob_pr_results[[sample]] <- pr
-}
-
-# Combine all results
-glob_pr_df <- bind_rows(glob_pr_results)
-
-# Reshape for plotting
-library(tidyr)
-glob_pr_long <- glob_pr_df %>%
-  select(sample, cnv, precision, recall, f1) %>%
-  pivot_longer(cols = c('precision', 'recall', 'f1'), names_to = 'metric', values_to = 'value')
-
-# Plot
+# Plot: stacked precision, recall, F1 vertically using patchwork
 library(ggplot2)
-ggplot(glob_pr_long, aes(x = sample, y = value, fill = metric)) +
-  geom_bar(stat = 'identity', position = 'dodge') +
-  facet_wrap(~cnv) +
-  labs(title = 'Precision, Recall, F1 for each sample (by CNV type)', y = 'Score', x = 'Sample') +
-  theme_minimal() +
-  scale_fill_brewer(palette = 'Set1')
+library(patchwork)
+plot_metric <- function(met) {
+  paired_all_long %>% filter(metric == met) %>%
+    ggplot(aes(x = method, y = value, group = sample, color = sample)) +
+    geom_boxplot(aes(group = method), width = 0.5, fill = 'gray90', color = 'black', alpha = 0.4, outlier.shape = NA) +
+    geom_point(size = 2) +
+    geom_line() +
+    facet_wrap(~cnv) +
+    labs(title = paste('Paired', toupper(met), 'for all samples: CONGAS+ vs Numbat-multiome Combined Bin'),
+         y = toupper(met), x = NULL) +
+    theme_minimal() +
+    theme(legend.position = 'none')
+}
+# Plot: stacked precision, recall, F1 vertically using ggarrange
+library(ggpubr)
+p_f1 <- plot_metric('f1')
+p_precision <- plot_metric('precision')
+p_recall <- plot_metric('recall')
+ggarrange(p_f1, p_precision, p_recall, ncol = 1, nrow = 3)
