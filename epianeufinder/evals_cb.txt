@@ -1,0 +1,9 @@
+sample	n_cells	file_path
+epianeufinder_DL3267	1264	./epianeufinder_DL3267/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM10109	3019	./epianeufinder_pM10109/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM10114	5019	./epianeufinder_pM10114/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM10975	3376	./epianeufinder_pM10975/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM11004	3434	./epianeufinder_pM11004/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM11104	1220	./epianeufinder_pM11104/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM1835	2944	./epianeufinder_pM1835/epiAneufinder_results/cnv_calls.rds
+epianeufinder_pM9916	1714	./epianeufinder_pM9916/epiAneufinder_results/cnv_calls.rds

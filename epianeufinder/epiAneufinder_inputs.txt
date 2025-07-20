@@ -1,0 +1,7 @@
+DL3267	gs://10x-outs-pre-myeloma/DL3267/CD138pos/DL3267_CD138pos_CA/outs/fragments.tsv.gz	gs://10x-outs-pre-myeloma/DL3267/CD138pos/DL3267_CD138pos_CA/outs/fragments.tsv.gz.tbi	gs://archr_47samples/CB/DL3267_full.txt
+pM10109	gs://archr_47samples/subsetfrag/pM10109_chrPCfragments.tsv.gz	gs://archr_47samples/subsetfrag/pM10109_chrPCfragments.tsv.gz.tbi	gs://archr_47samples/CB/pM10109_plasma.txt
+pM10114	gs://archr_47samples/subsetfrag/pM10114_chrPCfragments.tsv.gz	gs://archr_47samples/subsetfrag/pM10114_chrPCfragments.tsv.gz.tbi	gs://archr_47samples/CB/pM10114_plasma.txt
+pM10975	gs://archr_47samples/subsetfrag/pM10975_chrPCfragments.tsv.gz	gs://archr_47samples/subsetfrag/pM10975_chrPCfragments.tsv.gz.tbi	gs://archr_47samples/CB/pM10975_plasma.txt
+pM11004	gs://archr_47samples/subsetfrag/pM11004_chrPCfragments.tsv.gz	gs://archr_47samples/subsetfrag/pM11004_chrPCfragments.tsv.gz.tbi	gs://archr_47samples/CB/pM11004_plasma.txt
+pM1835	gs://archr_47samples/subsetfrag/pM1835_chrPCfragments.tsv.gz	gs://archr_47samples/subsetfrag/pM1835_chrPCfragments.tsv.gz.tbi	gs://archr_47samples/CB/pM1835_plasma.txt
+pM9916	gs://10x-outs-pre-myeloma/pM9916/CD138pos/pM9916_CD138pos_CA/outs/fragments.tsv.gz	gs://10x-outs-pre-myeloma/pM9916/CD138pos/pM9916_CD138pos_CA/outs/fragments.tsv.gz.tbi	gs://archr_47samples/CB/pM9916_full.txt
