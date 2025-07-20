@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # where your .rds files live
-DIR="benchmark"
+DIR="binsize"
 
 # path to the script you want to call
 NUMBAT_SCRIPT="${DIR}/numbat_chr7.sh"

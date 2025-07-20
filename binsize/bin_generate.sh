@@ -9,5 +9,5 @@ bsizes <- c(20e3, 50e3, 80e3);
 # tile and save
 for (b in bsizes) {
   gr <- tileGenome(seqlengths=seql, tilewidth=b, cut.last.tile.in.chrom=TRUE);
-  saveRDS(gr, paste0("benchmark/bin", b/1e3, "kb_chr7.rds"));
+  saveRDS(gr, paste0("binsize/bin", b/1e3, "kb_chr7.rds"));
 }'

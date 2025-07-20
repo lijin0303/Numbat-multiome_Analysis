@@ -3,8 +3,8 @@ set -euo pipefail
 
 # 0. Config
 
-workdir="benchmark"
-rsrc="benchmark/inst"
+workdir="binsize"
+rsrc="binsize/inst"
 # prefix="bin500kb"
 prefix=$1
 binGR="${prefix}_chr7.rds"    # custom GRanges RDS under $rsrc

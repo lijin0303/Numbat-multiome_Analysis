@@ -4,7 +4,7 @@ pacman::p_load(karyoploteR,
                ggplotify,ggplot2,cowplot,
                ggpubr)
 wgs_df <- fread("intmd/patA_wgs_seg.tsv")
-dirs <- fs::dir_ls(path = "benchmark", 
+dirs <- fs::dir_ls(path = "binsize", 
                    regexp = "patA_bin\\d+kb_outputs$", 
                    type = "directory")
 numbat_segL <- dirs %>% 
